@@ -1,0 +1,1528 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>FS & Masterplan WPP Jodoh–Tanjung Pinggir</title>
+<meta name="description" content="Dashboard eksekutif FS & Masterplan WPP Jodoh–Tanjung Pinggir (BP Batam) — peta interaktif, kondisi eksisting, masterplan, dan akurasi survei drone.">
+<link rel="stylesheet" href="leaflet.css">
+<style>
+  html, body { margin: 0; padding: 0; background: #F4F7FB; }
+  /* Token font yang biasanya disediakan shell dashboard claude.ai */
+  :root { --font-anthropic-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+          --font-anthropic-serif: ui-serif, Georgia, "Times New Roman", serif; }
+  body { padding: 16px; }
+  @media (max-width: 640px) { body { padding: 10px; } }
+</style>
+<style>
+#jtp {
+  --b9:#061A33; --b8:#0A2E52; --b7:#12477D; --b6:#1E73BE; --b5:#3B8FD9; --b2:#CFE2F5; --b1:#E6F0FA; --b05:#F3F8FD;
+  --g6:#C9972A; --g4:#E2B95B; --g1:#FBF3E2;
+  --ink:#14243A; --muted:#5B6B80; --line:#DCE5EF; --card:#FFFFFF; --bg:#F4F7FB;
+  --ok:#2E7D32; --warn:#E08A00; --bad:#C62828;
+  --r:14px; --shadow:0 1px 2px rgba(10,46,82,.06), 0 6px 18px rgba(10,46,82,.07);
+  --shadow-h:0 4px 10px rgba(10,46,82,.10), 0 16px 34px rgba(10,46,82,.14);
+  --ease:cubic-bezier(.2,.75,.2,1);
+  font-family:var(--font-anthropic-sans); color:var(--ink); background:var(--bg);
+  border-radius:18px; position:relative; overflow:hidden; padding-bottom:34px;
+  font-size:14px; line-height:1.45;
+}
+#jtp *, #jtp *::before, #jtp *::after { box-sizing:border-box; }
+
+/* ---------- hero ---------- */
+#jtp .jh { position:relative; color:#fff; padding:22px 26px 0; overflow:hidden;
+  background:linear-gradient(118deg,#04152B 0%,#0A2E52 34%,#12477D 64%,#1E73BE 100%);
+  background-size:220% 220%; animation:jtpGrad 22s ease-in-out infinite; }
+#jtp .jh::before { content:""; position:absolute; inset:0; pointer-events:none; opacity:.35;
+  background-image:radial-gradient(rgba(255,255,255,.22) 1px, transparent 1.2px); background-size:18px 18px;
+  mask-image:linear-gradient(90deg, transparent 0%, #000 55%, #000 100%); }
+#jtp .jh-wave { position:absolute; left:0; right:0; bottom:46px; height:70px; pointer-events:none; opacity:.55; }
+#jtp .jh-wave svg { width:200%; height:100%; animation:jtpWave 26s linear infinite; }
+#jtp .jh-glow { position:absolute; width:420px; height:420px; border-radius:50%; right:-120px; top:-200px; pointer-events:none;
+  background:radial-gradient(circle, rgba(226,185,91,.38), rgba(226,185,91,0) 65%); animation:jtpFloat 9s ease-in-out infinite; }
+#jtp .jh-row { position:relative; display:flex; align-items:center; gap:16px; flex-wrap:wrap; }
+#jtp .jh-mark img { width:100%; height:100%; object-fit:contain; border-radius:8px; position:relative; z-index:1; display:block; }
+#jtp .jh-owner { margin-left:auto; text-align:right; font-size:11.5px; color:#CFE2F5; line-height:1.35; }
+#jtp .jh-owner b { display:block; color:#fff; font-size:13px; font-weight:650; }
+@media (max-width:720px) { #jtp .jh-owner { display:none; } }
+#jtp .jh-mark { width:64px; height:64px; border-radius:14px; flex:none; display:grid; place-items:center; padding:5px;
+  background:#fff; color:var(--b8); font-weight:700; letter-spacing:.04em; font-size:15px;
+  box-shadow:0 6px 18px rgba(0,0,0,.25); position:relative; overflow:hidden; }
+#jtp .jh-mark::after { content:""; position:absolute; inset:-40%; background:linear-gradient(115deg,transparent 40%,rgba(255,255,255,.9) 50%,transparent 60%);
+  animation:jtpShine 5.5s ease-in-out infinite; }
+#jtp .jh-kicker { font-size:11.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--g4); font-weight:600; }
+#jtp .jh-title { font-family:var(--font-anthropic-serif); font-size:clamp(22px,3.1vw,34px); line-height:1.1; margin:2px 0 3px; }
+#jtp .jh-title .w { display:inline-block; opacity:0; transform:translateY(14px); animation:jtpUp .8s var(--ease) forwards; animation-delay:calc(var(--d) * 90ms + 120ms); }
+#jtp .jh-sub { color:#CFE2F5; font-size:13.5px; }
+#jtp .jh-tabs { position:relative; display:flex; gap:4px; margin-top:20px; padding:5px; background:rgba(255,255,255,.08);
+  border:1px solid rgba(255,255,255,.14); border-radius:14px 14px 0 0; border-bottom:none; overflow-x:auto; scrollbar-width:none; }
+#jtp .jh-tabs::-webkit-scrollbar { display:none; }
+#jtp .jh-ind { position:absolute; top:5px; bottom:0; left:0; width:0; border-radius:10px 10px 0 0; background:var(--bg);
+  transition:left .45s var(--ease), width .45s var(--ease); z-index:0; }
+#jtp .jh-tab { position:relative; z-index:1; appearance:none; border:0; background:transparent; color:#E6F0FA; cursor:pointer;
+  font:inherit; font-weight:600; font-size:13.5px; padding:11px 18px 12px; border-radius:10px 10px 0 0; white-space:nowrap;
+  display:inline-flex; align-items:center; gap:8px; transition:color .3s; }
+#jtp .jh-tab svg { width:16px; height:16px; opacity:.85; }
+#jtp .jh-tab:hover { color:#fff; }
+#jtp .jh-tab.on { color:var(--b8); }
+#jtp .jh-tab:focus-visible { outline:2px solid var(--g4); outline-offset:-2px; }
+
+/* ---------- layout ---------- */
+#jtp .tab { padding:20px 22px 6px; }
+#jtp .tab[hidden] { display:none; }
+#jtp .grid { display:grid; gap:16px; }
+#jtp .g-kpi { grid-template-columns:repeat(auto-fit,minmax(min(100%,10.5rem),1fr)); margin-bottom:16px; }
+#jtp .g-2 { grid-template-columns:repeat(auto-fit,minmax(min(100%,22rem),1fr)); }
+#jtp .g-3 { grid-template-columns:repeat(auto-fit,minmax(min(100%,17rem),1fr)); }
+#jtp .g-split { grid-template-columns:minmax(0,1.65fr) minmax(0,1fr); }
+@media (max-width: 980px) { #jtp .g-split { grid-template-columns:1fr; } }
+#jtp .card { background:var(--card); border:1px solid var(--line); border-radius:var(--r); padding:16px 18px; box-shadow:var(--shadow);
+  transition:box-shadow .35s var(--ease), transform .35s var(--ease); min-width:0; }
+#jtp .card.lift:hover { box-shadow:var(--shadow-h); transform:translateY(-2px); }
+#jtp .card + .card { margin-top:0; }
+#jtp .stack > * + * { margin-top:16px; }
+#jtp .ct { display:flex; align-items:center; gap:9px; font-weight:650; font-size:15.5px; color:var(--b8); margin:0; }
+#jtp .ct .dot { width:8px; height:8px; border-radius:50%; background:var(--g6); box-shadow:0 0 0 4px var(--g1); flex:none; }
+#jtp .cd { color:var(--muted); font-size:12.8px; margin:4px 0 12px; }
+#jtp .pill { display:inline-flex; align-items:center; gap:6px; font-size:11px; font-weight:600; letter-spacing:.03em; padding:3px 9px; border-radius:999px; background:var(--g1); color:#8A6410; }
+
+/* ---------- enter animation ---------- */
+#jtp .anim { opacity:0; }
+#jtp .tab.enter .anim { animation:jtpUp .7s var(--ease) forwards; animation-delay:calc(var(--i, 0) * 75ms); }
+#jtp .tab.shown .anim { opacity:1; }
+#jtp .sub.enter .anim { animation:jtpUp .6s var(--ease) both; animation-delay:calc(var(--i, 0) * 70ms); }
+
+/* ---------- KPI ---------- */
+#jtp .kpi { position:relative; overflow:hidden; background:var(--card); border:1px solid var(--line); border-radius:var(--r); padding:14px 16px 13px;
+  box-shadow:var(--shadow); transition:transform .35s var(--ease), box-shadow .35s var(--ease); }
+#jtp .kpi:hover { transform:translateY(-3px); box-shadow:var(--shadow-h); }
+#jtp .kpi::before { content:""; position:absolute; left:0; top:0; bottom:0; width:4px; background:linear-gradient(180deg,var(--b6),var(--g6)); }
+#jtp .kpi::after { content:""; position:absolute; right:-30px; top:-30px; width:90px; height:90px; border-radius:50%; background:radial-gradient(circle,var(--b1),transparent 70%); }
+#jtp .kpi-ic { width:30px; height:30px; border-radius:9px; display:grid; place-items:center; background:var(--b1); color:var(--b6); margin-bottom:8px; position:relative; z-index:1; }
+#jtp .kpi-ic svg { width:17px; height:17px; }
+#jtp .kpi-v { font-family:var(--font-anthropic-serif); font-size:clamp(22px,2.3vw,28px); line-height:1.05; color:var(--b8); font-variant-numeric:tabular-nums; position:relative; z-index:1; }
+#jtp .kpi-l { color:var(--muted); font-size:12px; margin-top:4px; position:relative; z-index:1; }
+
+/* ---------- sub tabs (segmented) ---------- */
+#jtp .seg { display:inline-flex; flex-wrap:wrap; gap:4px; padding:4px; background:#fff; border:1px solid var(--line); border-radius:12px; margin-bottom:16px; box-shadow:var(--shadow); }
+#jtp .seg button { appearance:none; border:0; background:transparent; font:inherit; font-size:13px; font-weight:600; color:var(--muted); padding:8px 14px; border-radius:9px; cursor:pointer; transition:background .25s, color .25s; }
+#jtp .seg button:hover { color:var(--b7); background:var(--b05); }
+#jtp .seg button.on { background:linear-gradient(135deg,var(--b7),var(--b6)); color:#fff; box-shadow:0 4px 12px rgba(30,115,190,.35); }
+#jtp .sub[hidden] { display:none; }
+
+/* ---------- charts ---------- */
+#jtp .chart { position:relative; min-height:200px; }
+#jtp .chart svg { display:block; width:100%; }
+#jtp .tip { position:absolute; pointer-events:none; z-index:30; background:var(--b9); color:#fff; border-radius:8px; padding:7px 10px; font-size:12px; line-height:1.4;
+  max-width:16rem; box-shadow:0 8px 22px rgba(6,26,51,.35); opacity:0; transform:translateY(4px); transition:opacity .15s, transform .15s; }
+#jtp .tip.on { opacity:1; transform:none; }
+#jtp .tip b { color:var(--g4); font-weight:600; }
+#jtp .lg { display:flex; flex-wrap:wrap; gap:6px 14px; margin-top:8px; font-size:12px; color:var(--muted); }
+#jtp .lg span { display:inline-flex; align-items:center; gap:6px; }
+#jtp .sw { width:11px; height:11px; border-radius:3px; flex:none; display:inline-block; border:1px solid rgba(0,0,0,.08); }
+
+/* ---------- tables ---------- */
+#jtp .tw { overflow-x:auto; border-radius:10px; border:1px solid var(--line); }
+#jtp table.t { width:100%; border-collapse:collapse; font-size:13px; }
+#jtp table.t th { text-align:left; background:var(--b8); color:#fff; font-weight:600; font-size:12px; padding:9px 11px; white-space:nowrap; }
+#jtp table.t td { padding:8px 11px; border-top:1px solid var(--line); vertical-align:top; }
+#jtp table.t tbody tr { transition:background .2s; }
+#jtp table.t tbody tr:nth-child(even) { background:var(--b05); }
+#jtp table.t tbody tr:hover { background:var(--b1); }
+#jtp .mini { display:grid; grid-template-columns:repeat(auto-fit,minmax(7.5rem,1fr)); gap:14px; }
+#jtp .mini-v { font-family:var(--font-anthropic-serif); font-size:24px; color:var(--b8); font-variant-numeric:tabular-nums; line-height:1.1; }
+#jtp .mini-l { font-size:12px; color:var(--muted); }
+#jtp ol.nl { margin:0; padding:0; list-style:none; display:grid; grid-template-columns:repeat(auto-fit,minmax(11rem,1fr)); gap:8px; counter-reset:n; }
+#jtp ol.nl li { counter-increment:n; display:flex; align-items:center; gap:10px; background:var(--b05); border:1px solid var(--line); border-radius:10px; padding:8px 10px; font-size:13px; }
+#jtp ol.nl li::before { content:counter(n); width:24px; height:24px; border-radius:50%; flex:none; display:grid; place-items:center; background:var(--b7); color:#fff; font-size:11.5px; font-weight:700; }
+
+/* ---------- vision ---------- */
+#jtp .vision { position:relative; overflow:hidden; border-radius:12px; padding:18px 20px; color:#fff; background:linear-gradient(135deg,var(--b8),var(--b6)); }
+#jtp .vision::after { content:""; position:absolute; right:-40px; bottom:-60px; width:200px; height:200px; border-radius:50%; border:28px solid rgba(255,255,255,.07); }
+#jtp .vision-k { font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--g4); font-weight:600; }
+#jtp .vision-t { font-family:var(--font-anthropic-serif); font-size:clamp(17px,1.8vw,21px); line-height:1.3; margin-top:6px; position:relative; z-index:1; }
+#jtp .chips { display:flex; flex-wrap:wrap; gap:7px; margin-top:12px; }
+#jtp .chip { display:inline-flex; align-items:center; gap:7px; font-size:12px; padding:5px 10px; border-radius:999px; background:var(--b05); border:1px solid var(--line); color:var(--ink); transition:transform .25s var(--ease), background .25s; }
+#jtp .chip:hover { transform:translateY(-2px); background:var(--b1); }
+#jtp .chip i { font-style:normal; font-weight:700; color:var(--b6); }
+
+/* ---------- gallery ---------- */
+#jtp .gal { display:grid; grid-template-columns:repeat(auto-fill,minmax(min(100%,13.5rem),1fr)); gap:14px; }
+#jtp .gi { appearance:none; text-align:left; font:inherit; color:inherit; padding:0; cursor:zoom-in; background:var(--card); border:1px solid var(--line); border-radius:12px; overflow:hidden;
+  box-shadow:var(--shadow); transition:transform .4s var(--ease), box-shadow .4s var(--ease); display:flex; flex-direction:column; }
+#jtp .gi:hover, #jtp .gi:focus-visible { transform:translateY(-4px); box-shadow:var(--shadow-h); outline:none; }
+#jtp .gi-fig { position:relative; aspect-ratio:16/10; overflow:hidden; background:linear-gradient(110deg,#EAF1F8 30%,#F6FAFD 50%,#EAF1F8 70%); background-size:200% 100%; animation:jtpShim 1.4s linear infinite; }
+#jtp .gi-fig img { width:100%; height:100%; object-fit:cover; display:block; transform:scale(1.02); transition:transform .8s var(--ease), opacity .6s; opacity:0; }
+#jtp .gi-fig img.ld { opacity:1; }
+#jtp .gi:hover .gi-fig img { transform:scale(1.1); }
+#jtp .gi-fig::after { content:""; position:absolute; inset:0; background:linear-gradient(180deg,transparent 45%,rgba(6,26,51,.72)); opacity:.85; transition:opacity .4s; }
+#jtp .gi-zoom { position:absolute; right:10px; top:10px; z-index:2; width:32px; height:32px; border-radius:50%; display:grid; place-items:center; background:rgba(255,255,255,.92); color:var(--b8);
+  transform:scale(.6); opacity:0; transition:transform .35s var(--ease), opacity .35s; }
+#jtp .gi:hover .gi-zoom, #jtp .gi:focus-visible .gi-zoom { transform:scale(1); opacity:1; }
+#jtp .gi-zoom svg { width:16px; height:16px; }
+#jtp .gi-no { position:absolute; left:10px; top:10px; z-index:2; font-size:11px; font-weight:700; color:#fff; background:rgba(201,151,42,.95); padding:2px 8px; border-radius:999px; }
+#jtp .gi-t { position:absolute; left:12px; right:12px; bottom:9px; z-index:2; color:#fff; font-weight:650; font-size:13.5px; line-height:1.25; text-shadow:0 1px 3px rgba(0,0,0,.4); }
+#jtp .gi-d { padding:9px 12px 11px; font-size:12px; color:var(--muted); line-height:1.4; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; }
+
+/* ---------- lightbox ---------- */
+#jtp .lb { position:fixed; inset:0; z-index:9999; display:flex; flex-direction:column; background:rgba(4,14,28,.92); backdrop-filter:blur(6px); color:#fff; opacity:0; transition:opacity .3s; }
+#jtp .lb[hidden] { display:none; }
+#jtp .lb.on { opacity:1; }
+#jtp .lb-top { display:flex; align-items:center; gap:10px; padding:12px 16px; }
+#jtp .lb-count { font-size:12.5px; color:#CFE2F5; font-variant-numeric:tabular-nums; }
+#jtp .lb-sp { flex:1; }
+#jtp .lb-btn { appearance:none; border:1px solid rgba(255,255,255,.18); background:rgba(255,255,255,.08); color:#fff; width:38px; height:38px; border-radius:10px; display:grid; place-items:center; cursor:pointer; transition:background .2s, transform .2s; font:inherit; }
+#jtp .lb-btn:hover { background:rgba(255,255,255,.2); transform:translateY(-1px); }
+#jtp .lb-btn svg { width:18px; height:18px; }
+#jtp .lb-stage { position:relative; flex:1; overflow:hidden; cursor:grab; touch-action:none; }
+#jtp .lb-stage.drag { cursor:grabbing; }
+#jtp .lb-img { position:absolute; left:0; top:0; max-width:none; max-height:none; width:auto; height:auto; transform-origin:0 0; user-select:none; -webkit-user-drag:none; border-radius:6px; box-shadow:0 20px 60px rgba(0,0,0,.5);
+  transition:filter .5s, opacity .3s; will-change:transform; }
+#jtp .lb-img.low { filter:blur(6px) saturate(.9); }
+#jtp .lb-img.pop { animation:jtpPop .45s var(--ease); }
+#jtp .lb-nav { position:absolute; top:50%; transform:translateY(-50%); z-index:3; width:46px; height:46px; border-radius:50%; }
+#jtp .lb-prev { left:14px; } #jtp .lb-next { right:14px; }
+#jtp .lb-load { position:absolute; left:50%; bottom:18px; transform:translateX(-50%); z-index:3; font-size:12px; background:rgba(0,0,0,.55); padding:5px 12px; border-radius:999px; display:flex; align-items:center; gap:8px; }
+#jtp .lb-load[hidden] { display:none; }
+#jtp .lb-load::before { content:""; width:12px; height:12px; border-radius:50%; border:2px solid rgba(255,255,255,.3); border-top-color:#fff; animation:jtpSpin .8s linear infinite; }
+#jtp .lb-cap { padding:12px 18px 16px; max-width:1100px; margin:0 auto; text-align:center; }
+#jtp .lb-cap h4 { margin:0 0 4px; font-family:var(--font-anthropic-serif); font-size:19px; font-weight:500; }
+#jtp .lb-cap p { margin:0; color:#CFE2F5; font-size:13px; }
+#jtp .lb-hint { font-size:11.5px; color:#8FA6BF; margin-top:6px; }
+
+/* ---------- maps ---------- */
+#jtp .mapcard { padding:0; overflow:hidden; }
+#jtp .mapcard-h { display:flex; align-items:flex-start; gap:12px; justify-content:space-between; flex-wrap:wrap; padding:14px 18px 10px; }
+#jtp .mapwrap { position:relative; }
+#jtp .lmap { height:clamp(430px,64vh,700px); width:100%; background:#CFE3EE; }
+#jtp .lmap.sm { height:clamp(420px,60vh,640px); }
+#jtp .lmap.dark { background:#0E1B2B; }
+#jtp .leaflet-container { font-family:var(--font-anthropic-sans); }
+#jtp .leaflet-control-zoom { border:0 !important; box-shadow:var(--shadow) !important; border-radius:10px !important; overflow:hidden; }
+#jtp .leaflet-control-zoom a { width:34px !important; height:34px !important; line-height:34px !important; color:var(--b8) !important; font-size:18px !important; }
+#jtp .leaflet-control-scale-line { border-color:#3D4B5C; color:#22303F; background:rgba(255,255,255,.75); font-size:11px; }
+#jtp .leaflet-control-attribution { font-size:10.5px; background:rgba(255,255,255,.75) !important; }
+#jtp .mp { position:absolute; z-index:500; background:rgba(255,255,255,.96); border:1px solid var(--line); border-radius:12px; box-shadow:0 8px 26px rgba(6,26,51,.18); font-size:12.5px; }
+#jtp .mp-layers { top:12px; right:12px; width:min(272px, calc(100% - 80px)); max-height:calc(100% - 24px); display:flex; flex-direction:column; }
+#jtp .mp-h { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:10px 12px; border-bottom:1px solid var(--line); font-weight:650; color:var(--b8); cursor:pointer; user-select:none; }
+#jtp .mp-h svg { width:16px; height:16px; transition:transform .3s; }
+#jtp .mp.col .mp-h svg { transform:rotate(-90deg); }
+#jtp .mp-b { overflow:auto; padding:8px 12px 12px; transition:max-height .35s var(--ease); }
+#jtp .mp.col .mp-b { display:none; }
+#jtp .mp.col .mp-h { border-bottom:0; }
+#jtp .mp-g { font-size:10.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); font-weight:700; margin:10px 0 5px; }
+#jtp .mp-g:first-child { margin-top:2px; }
+#jtp .mp label { display:flex; align-items:center; gap:8px; padding:4px 6px; margin:0 -6px; border-radius:7px; cursor:pointer; transition:background .2s; line-height:1.25; }
+#jtp .mp label:hover { background:var(--b05); }
+#jtp .mp input { accent-color:var(--b6); margin:0; flex:none; }
+#jtp .mp label .star { color:var(--g6); font-weight:700; }
+#jtp .mp-op { display:flex; align-items:center; gap:8px; margin-top:8px; color:var(--muted); font-size:11.5px; }
+#jtp .mp-op input[type=range] { flex:1; }
+#jtp .mp-bm { display:flex; gap:4px; }
+#jtp .mp-bm button { flex:1; appearance:none; font:inherit; font-size:12px; font-weight:600; border:1px solid var(--line); background:#fff; color:var(--muted); padding:5px 6px; border-radius:8px; cursor:pointer; }
+#jtp .mp-bm button.on { background:var(--b8); color:#fff; border-color:var(--b8); }
+#jtp .mp-bm { flex-wrap:wrap; }
+#jtp .mp-bm button { flex:1 1 42%; }
+#jtp .mp-note { margin-top:7px; font-size:11px; line-height:1.35; color:#8A6410; background:var(--g1); border-radius:7px; padding:6px 8px; }
+#jtp .mp-note[hidden] { display:none; }
+#jtp .gcp-ic { display:block; }
+#jtp .mp-legend { left:12px; bottom:22px; width:min(300px, calc(100% - 24px)); max-height:46%; overflow:auto; padding:10px 12px; }
+#jtp .mp-legend.col .lgb { display:none; }
+#jtp .lgt { font-weight:650; color:var(--b8); font-size:12px; margin:8px 0 4px; display:flex; justify-content:space-between; align-items:center; gap:6px; }
+#jtp .lgt:first-child { margin-top:0; }
+#jtp .lgr { display:flex; align-items:center; gap:8px; padding:2px 0; font-size:12px; color:#2B3B50; }
+#jtp .lgr .sw { width:16px; height:11px; border-radius:2px; }
+#jtp .lgr .ln { width:18px; height:0; border-top-width:3px; border-top-style:solid; flex:none; }
+#jtp .lgr .pt { width:12px; height:12px; border-radius:50%; border:2px solid #fff; box-shadow:0 0 0 1px rgba(0,0,0,.25); flex:none; }
+#jtp .lgr.btn { cursor:pointer; border-radius:6px; padding:2px 4px; margin:0 -4px; transition:background .2s, opacity .2s; }
+#jtp .lgr.btn:hover { background:var(--b05); }
+#jtp .lgr.off { opacity:.38; text-decoration:line-through; }
+#jtp .lgr small { margin-left:auto; color:var(--muted); font-variant-numeric:tabular-nums; }
+#jtp .mp-coord { right:12px; bottom:54px; padding:5px 10px; font-size:11px; color:var(--muted); font-variant-numeric:tabular-nums; }
+#jtp .mp-north { left:58px; top:12px; width:40px; height:48px; display:grid; place-items:center; padding:2px; }
+#jtp .mp-north svg { width:26px; height:40px; }
+#jtp .mp-status { left:50%; top:50%; transform:translate(-50%,-50%); padding:10px 16px; font-size:13px; color:var(--b8); display:flex; gap:10px; align-items:center; }
+#jtp .mp-status::before { content:""; width:14px; height:14px; border-radius:50%; border:2px solid var(--b1); border-top-color:var(--b6); animation:jtpSpin .8s linear infinite; }
+#jtp .mp-status[hidden] { display:none; }
+#jtp .jlbl { background:transparent; border:0; box-shadow:none; padding:0; font-size:11px; font-weight:600; color:#2E3A48; letter-spacing:.02em; white-space:nowrap;
+  text-shadow:-1px -1px 0 #fff,1px -1px 0 #fff,-1px 1px 0 #fff,1px 1px 0 #fff,0 0 4px #fff; }
+#jtp .jlbl.ctx { font-size:10px; font-weight:500; color:#5B6676; font-style:italic; }
+#jtp .jlbl.dst { font-size:11.5px; color:#9A3412; text-transform:uppercase; letter-spacing:.06em; }
+#jtp .jlbl::before { display:none; }
+#jtp .lmap.dark .jlbl, #jtp .lmap.sat .jlbl { color:#F2F7FC; text-shadow:0 0 3px #000, 0 0 6px #000, 0 1px 2px #000; }
+#jtp .lmap.dark .jlbl.dst, #jtp .lmap.sat .jlbl.dst { color:#FDBA74; }
+#jtp .lmap.sat .jlbl.pin, #jtp .lmap.dark .jlbl.pin { color:#FFFFFF; }
+#jtp .lmap.lowz .jlbl:not(.dst):not(.pin) { display:none; }
+#jtp .jlbl.pin { font-size:11px; color:#0A2E52; }
+#jtp .jtt { font-size:12px; border-radius:8px; border:0; box-shadow:0 6px 18px rgba(6,26,51,.25); padding:6px 9px; }
+#jtp .jtt b { color:var(--b8); }
+#jtp .leaflet-popup-content-wrapper { border-radius:12px; box-shadow:0 12px 32px rgba(6,26,51,.28); }
+#jtp .leaflet-popup-content { margin:12px 14px; font-size:12.5px; min-width:210px; }
+#jtp .pp-h { font-weight:700; color:var(--b8); font-size:13.5px; margin-bottom:2px; display:flex; align-items:center; gap:8px; }
+#jtp .pp-k { font-size:10.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); margin-bottom:6px; }
+#jtp .pp table { border-collapse:collapse; width:100%; }
+#jtp .pp td { padding:3px 0; border-top:1px solid var(--line); vertical-align:top; }
+#jtp .pp td:first-child { color:var(--muted); padding-right:10px; white-space:nowrap; }
+#jtp .port-ic { width:24px; height:24px; border-radius:50%; display:grid; place-items:center; color:#fff; border:2px solid #fff; box-shadow:0 2px 6px rgba(0,0,0,.35); transition:transform .2s; }
+#jtp .port-ic:hover { transform:scale(1.18); }
+#jtp .port-ic svg { width:13px; height:13px; }
+#jtp .leaflet-div-icon { background:transparent; border:0; }
+
+/* ---------- zone bars ---------- */
+#jtp .zb { display:flex; flex-direction:column; gap:5px; }
+#jtp .zb-r { display:grid; grid-template-columns:14px minmax(0,1fr) auto; gap:9px; align-items:center; padding:5px 7px; border-radius:8px; cursor:pointer; transition:background .2s, opacity .25s; }
+#jtp .zb-r:hover, #jtp .zb-r.hl { background:var(--b05); }
+#jtp .zb-r.off { opacity:.35; }
+#jtp .zb-r .sw { width:14px; height:14px; border-radius:4px; }
+#jtp .zb-n { font-size:12.5px; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+#jtp .zb-bar { grid-column:2 / 4; height:7px; border-radius:999px; background:var(--b05); overflow:hidden; margin-top:-2px; }
+#jtp .zb-bar i { display:block; height:100%; width:0; border-radius:999px; transition:width 1s var(--ease); }
+#jtp .zb-v { font-size:12px; color:var(--muted); font-variant-numeric:tabular-nums; }
+#jtp .note { font-size:11.5px; color:var(--muted); background:var(--b05); border:1px dashed var(--b2); border-radius:10px; padding:8px 10px; margin-top:12px; }
+
+/* ---------- drone ---------- */
+#jtp .verdict { display:flex; align-items:center; gap:10px; margin:2px 0 4px; }
+#jtp .verdict-k { font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); font-weight:700; min-width:76px; }
+#jtp .verdict-v { font-weight:700; font-size:13px; padding:3px 10px; border-radius:999px; background:var(--b1); color:var(--b8); }
+#jtp .verdict-v.k1 { background:#E3F4E4; color:#1B5E20; } #jtp .verdict-v.k2 { background:#EEF6DD; color:#4E6B12; }
+#jtp .verdict-v.k3 { background:#FFF4CF; color:#7A5800; } #jtp .verdict-v.k0 { background:#FDE4E4; color:#9B1C1C; }
+#jtp .gauge { position:relative; min-height:86px; margin-bottom:10px; }
+#jtp .gauge svg { display:block; width:100%; }
+
+/* ---------- video ---------- */
+#jtp .vid { width:100%; display:block; border-radius:10px; background:#000; aspect-ratio:16/9; max-height:min(46vh, 420px); object-fit:contain; box-shadow:0 10px 26px rgba(6,26,51,.22); }
+
+/* ---------- credit ---------- */
+#jtp .credit { position:fixed; right:14px; bottom:12px; z-index:900; display:flex; align-items:center; gap:7px; pointer-events:none;
+  background:linear-gradient(135deg,rgba(10,46,82,.92),rgba(30,115,190,.92)); color:#fff; font-size:11px; letter-spacing:.01em; padding:6px 12px 6px 9px;
+  border-radius:999px; box-shadow:0 6px 18px rgba(6,26,51,.3); animation:jtpUp .8s var(--ease) 1s both; }
+#jtp .credit::before { content:""; width:7px; height:7px; border-radius:50%; background:var(--g4); box-shadow:0 0 0 3px rgba(226,185,91,.3); animation:jtpPulse 2.4s ease-in-out infinite; }
+
+@keyframes jtpGrad { 0%,100% { background-position:0% 50%; } 50% { background-position:100% 50%; } }
+@keyframes jtpWave { from { transform:translateX(0); } to { transform:translateX(-50%); } }
+@keyframes jtpFloat { 0%,100% { transform:translate(0,0); } 50% { transform:translate(-30px,24px); } }
+@keyframes jtpShine { 0%,70% { transform:translateX(-60%); } 100% { transform:translateX(60%); } }
+@keyframes jtpUp { from { opacity:0; transform:translateY(14px); } to { opacity:1; transform:none; } }
+@keyframes jtpPop { from { opacity:0; scale:.94; } to { opacity:1; scale:1; } }
+@keyframes jtpSpin { to { transform:rotate(360deg); } }
+@keyframes jtpShim { to { background-position:-200% 0; } }
+@keyframes jtpPulse { 0%,100% { box-shadow:0 0 0 3px rgba(226,185,91,.3); } 50% { box-shadow:0 0 0 6px rgba(226,185,91,0); } }
+@media (prefers-reduced-motion: reduce) {
+  #jtp *, #jtp *::before, #jtp *::after { animation-duration:.01ms !important; animation-iteration-count:1 !important; transition-duration:.01ms !important; }
+  #jtp .anim, #jtp .jh-title .w { opacity:1 !important; transform:none !important; }
+}
+</style>
+
+</head>
+<body>
+<div id="jtp">
+  <header class="jh">
+    <div class="jh-glow"></div>
+    <div class="jh-wave" aria-hidden="true">
+      <svg viewBox="0 0 2400 70" preserveAspectRatio="none"><path fill="rgba(255,255,255,.08)" d="M0 40 C 200 10, 400 70, 600 40 S 1000 10, 1200 40 S 1600 70, 1800 40 S 2200 10, 2400 40 V70 H0Z"/><path fill="rgba(255,255,255,.06)" d="M0 52 C 150 30, 450 70, 600 52 S 1050 30, 1200 52 S 1650 70, 1800 52 S 2250 30, 2400 52 V70 H0Z"/></svg>
+    </div>
+    <div class="jh-row">
+      <div class="jh-mark"><img alt="Logo BP Batam" src="data:image/jpeg;base64,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"></div>
+      <div>
+        <div class="jh-kicker">Executive Dashboard · Kota Batam</div>
+        <div class="jh-title" id="jh-title"><span class="w" style="--d:0">Jodoh</span> <span class="w" style="--d:1">–</span> <span class="w" style="--d:2">Tanjung</span> <span class="w" style="--d:3">Pinggir</span></div>
+        <div class="jh-sub">Studi Kelayakan &amp; Masterplan Wilayah Penataan dan Pengembangan · Jalan Lingkar Luar</div>
+      </div>
+      <div class="jh-owner"><b>Badan Pengusahaan Batam</b>Pemilik pekerjaan</div>
+    </div>
+    <nav class="jh-tabs" id="jh-tabs" aria-label="Navigasi">
+      <span class="jh-ind" id="jh-ind"></span>
+      <button class="jh-tab on" data-tab="ringkasan" id="tb-ringkasan"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2z"/><path d="M9 4v14M15 6v14"/></svg>Ringkasan &amp; Peta</button>
+      <button class="jh-tab" data-tab="eksisting" id="tb-eksisting"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20h18M6 16l4-5 3 3 5-7"/></svg>Kondisi Eksisting</button>
+      <button class="jh-tab" data-tab="masterplan" id="tb-masterplan"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>Masterplan &amp; Distrik</button>
+      <button class="jh-tab" data-tab="drone" id="tb-drone"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="5" r="2.5"/><circle cx="19" cy="5" r="2.5"/><circle cx="5" cy="19" r="2.5"/><circle cx="19" cy="19" r="2.5"/><rect x="9" y="9" width="6" height="6" rx="1.5"/><path d="M7 7l2 2M17 7l-2 2M7 17l2-2M17 17l-2-2"/></svg>Survey Drone &amp; Akurasi</button>
+      <button class="jh-tab" data-tab="media" id="tb-media"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m10 9 5 3-5 3z"/></svg>Dokumentasi Video</button>
+    </nav>
+  </header>
+
+  <!-- ================= TAB 1: RINGKASAN & PETA ================= -->
+  <section class="tab" id="tab-ringkasan">
+    <div class="grid g-kpi">
+      <div class="kpi anim" style="--i:0"><div class="kpi-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16v16H4z"/><path d="M4 9h16M9 4v16" opacity=".5"/></svg></div>
+        <div class="kpi-v" data-source="kpi" data-field="luas_delineasi_ha" data-row="0" data-fmt="2">—</div><div class="kpi-l">Luas delineasi WPP (ha)</div></div>
+      <div class="kpi anim" style="--i:1"><div class="kpi-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 16c3 0 3-2 6-2s3 2 6 2 3-2 6-2"/><path d="M6 12V6h12v6"/></svg></div>
+        <div class="kpi-v" data-source="kpi" data-field="luas_reklamasi_rencana_ha" data-row="0" data-fmt="2">—</div><div class="kpi-l">Rencana reklamasi (ha)</div></div>
+      <div class="kpi anim" style="--i:2"><div class="kpi-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3 4 21M16 3l4 18M12 5v2M12 11v2M12 17v2"/></svg></div>
+        <div class="kpi-v" data-source="kpi" data-field="panjang_jalan_lingkar_km" data-row="0" data-fmt="1">—</div><div class="kpi-l">Jalan lingkar luar (km)</div></div>
+      <div class="kpi anim" style="--i:3"><div class="kpi-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21V9l9-6 9 6v12"/><path d="M9 21v-6h6v6"/></svg></div>
+        <div class="kpi-v" data-source="kpi" data-field="luas_kawasan_masterplan_ha" data-row="0" data-fmt="0">—</div><div class="kpi-l">Luas kawasan masterplan (ha)</div></div>
+      <div class="kpi anim" style="--i:4"><div class="kpi-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg></div>
+        <div class="kpi-v" data-source="kpi" data-field="jumlah_distrik_masterplan" data-row="0" data-fmt="0">—</div><div class="kpi-l">Distrik masterplan</div></div>
+    </div>
+
+    <div class="card mapcard anim" style="--i:5" id="card-peta-utama">
+      <div class="mapcard-h">
+        <div>
+          <h3 class="ct"><span class="dot"></span>Peta Interaktif Kawasan WPP Jodoh–Tanjung Pinggir</h3>
+          <p class="cd" style="margin-bottom:0">Layer utama: <b>Rencana Blok Zona Tanjung Pinggir</b>. Pilih tema peta dan layer di panel kanan; klik objek untuk melihat atributnya, scroll/klik peta untuk zoom.</p>
+        </div>
+        <span class="pill">Leaflet · 13 layer data spasial</span>
+      </div>
+      <div class="mapwrap" id="mw-main"
+           data-source="geo_daratan geo_blokzona geo_deliniasi geo_admin geo_kelurahan geo_jalan geo_kabel_pipa geo_pelabuhan geo_kumuh geo_mangrove geo_karhutla geo_sk_hutan geo_znt">
+        <div class="lmap" id="map-main"></div>
+        <div class="mp mp-status" id="st-main">Memuat data spasial…</div>
+      </div>
+    </div>
+
+    <div class="grid g-2" style="margin-top:16px">
+      <div class="card lift anim" style="--i:6" id="card-visi">
+        <h3 class="ct"><span class="dot"></span>Visi &amp; Konsep Masterplan</h3>
+        <p class="cd">Arah desain kawasan dari dokumen rancangan arsitek: 9 distrik di atas kawasan eksisting dan rencana reklamasi.</p>
+        <div class="vision"><div class="vision-k">Visi Pembangunan Kawasan</div>
+          <div class="vision-t">Kawasan tepian air yang berkelanjutan, memiliki daya saing, dan menjadi pusat pertumbuhan ekonomi pesisir Kota Batam</div></div>
+        <div class="chips" id="chips-distrik" data-source="distrik"></div>
+      </div>
+      <div class="card lift anim" style="--i:7" id="card-sorotan">
+        <h3 class="ct"><span class="dot"></span>Sorotan Rencana Blok Zona</h3>
+        <p class="cd">Lima zona terluas pada peta rencana blok Tanjung Pinggir (hasil olah shapefile, luas dihitung dari geometri).</p>
+        <div class="zb" id="zb-ringkas" data-source="blok_luas_zona"></div>
+      </div>
+    </div>
+
+    <div class="card anim" style="--i:8; margin-top:16px" id="card-galeri-desain">
+      <h3 class="ct"><span class="dot"></span>Galeri Desain &amp; Render Arsitektur</h3>
+      <p class="cd">Klik gambar untuk memperbesar — gunakan scroll/tombol untuk zoom, seret untuk menggeser, panah untuk berpindah gambar.</p>
+      <div class="gal" id="gal-desain" data-source="img_thumbs"></div>
+    </div>
+  </section>
+
+  <!-- ================= TAB 2: KONDISI EKSISTING ================= -->
+  <section class="tab" id="tab-eksisting" hidden>
+    <div class="seg anim" style="--i:0" id="seg-eks">
+      <button class="on" data-sub="eks-peta">Galeri Peta</button>
+      <button data-sub="eks-lahan">Lahan &amp; Topografi</button>
+      <button data-sub="eks-jalan">Jaringan Jalan</button>
+      <button data-sub="eks-iklim">Iklim &amp; Oseanografi</button>
+      <button data-sub="eks-ekologi">Ekologi &amp; Sosial</button>
+    </div>
+
+    <div class="sub" id="eks-peta">
+      <div class="card anim" style="--i:1" id="card-galeri-peta">
+        <h3 class="ct"><span class="dot"></span>Peta Tematik Kondisi Eksisting</h3>
+        <p class="cd">16 peta analisis kondisi eksisting kawasan WPP. Klik peta untuk membuka tampilan besar dengan zoom.</p>
+        <div class="gal" id="gal-peta" data-source="img_thumbs"></div>
+      </div>
+    </div>
+
+    <div class="sub" id="eks-lahan" hidden>
+      <div class="grid g-3">
+        <div class="card lift anim" style="--i:1" id="card-landuse"><h3 class="ct"><span class="dot"></span>Penggunaan Lahan Eksisting</h3>
+          <p class="cd">Pangsa tiga kelas dominan penggunaan lahan di kawasan WPP.</p><div class="chart" id="ch-landuse" data-source="landuse"></div></div>
+        <div class="card lift anim" style="--i:2" id="card-morfo"><h3 class="ct"><span class="dot"></span>Morfografi</h3>
+          <p class="cd">Klasifikasi elevasi — didominasi dataran rendah (&lt;50 m).</p><div class="chart" id="ch-morfo" data-source="topografi"></div></div>
+        <div class="card lift anim" style="--i:3" id="card-lereng"><h3 class="ct"><span class="dot"></span>Kemiringan Lereng</h3>
+          <p class="cd">Lebih dari seperlima wilayah sangat curam — perlu evaluasi stabilitas lereng.</p><div class="chart" id="ch-lereng" data-source="topografi"></div></div>
+      </div>
+    </div>
+
+    <div class="sub" id="eks-jalan" hidden>
+      <div class="grid g-2">
+        <div class="card lift anim" style="--i:1" id="card-jalan-stat"><h3 class="ct"><span class="dot"></span>Jaringan Jalan &amp; Trotoar</h3>
+          <p class="cd">Ringkasan infrastruktur jalan kawasan studi.</p>
+          <div class="mini">
+            <div><div class="mini-v" data-source="kpi" data-field="panjang_jaringan_jalan_km" data-row="0" data-fmt="2">—</div><div class="mini-l">km jaringan jalan</div></div>
+            <div><div class="mini-v" data-source="kpi" data-field="jumlah_akses_utama" data-row="0" data-fmt="0">—</div><div class="mini-l">akses utama</div></div>
+            <div><div class="mini-v" data-source="kpi" data-field="jumlah_rencana_jembatan" data-row="0" data-fmt="0">—</div><div class="mini-l">rencana jembatan</div></div>
+            <div><div class="mini-v" data-source="kpi" data-field="panjang_trotoar_km" data-row="0" data-fmt="3">—</div><div class="mini-l">km trotoar</div></div>
+          </div></div>
+        <div class="card lift anim" style="--i:2" id="card-jalan-fungsi"><h3 class="ct"><span class="dot"></span>Panjang Ruas per Fungsi Jalan</h3>
+          <p class="cd">Dari 892 ruas jaringan jalan terbaru di dalam WPP (panjang dihitung dari geometri).</p>
+          <div class="chart" id="ch-jalan" data-source="jalan_per_fungsi"></div></div>
+      </div>
+      <div class="card anim" style="--i:3; margin-top:16px" id="card-vcr"><h3 class="ct"><span class="dot"></span>Kapasitas Jalan (VCR)</h3>
+        <p class="cd">Volume Capacity Ratio LHR 2024 pada lima ruas akses utama.</p>
+        <div class="chart" id="ch-vcr" data-source="vcr_jalan" style="min-height:150px"></div>
+        <div class="tw" style="margin-top:10px"><table class="t" id="tb-vcr" data-source="vcr_jalan" data-row-key="nama_jalan"><thead><tr>
+          <th data-field="nama_jalan">Ruas Jalan</th><th data-field="vcr_2024">VCR 2024</th><th data-field="durasi_capai_084_eksisting">Eksisting → VCR 0,84</th><th data-field="tahun_capai_084_rencana">Rencana 6 Lajur → VCR 0,84</th>
+        </tr></thead><tbody></tbody></table></div></div>
+    </div>
+
+    <div class="sub" id="eks-iklim" hidden>
+      <div class="grid g-2">
+        <div class="card anim" style="--i:1" id="card-iklim"><h3 class="ct"><span class="dot"></span>Iklim &amp; Angin</h3>
+          <p class="cd">Stasiun Meteorologi Hang Nadim Batam, 2020–2026.</p>
+          <div class="tw"><table class="t" id="tb-iklim" data-source="hidroklimatologi" data-row-key="parameter,kategori"><thead><tr><th data-field="parameter">Parameter</th><th data-field="kategori">Periode/Musim</th><th data-field="nilai">Nilai</th><th data-field="satuan">Satuan</th><th data-field="catatan">Catatan</th></tr></thead><tbody></tbody></table></div></div>
+        <div class="card anim" style="--i:2" id="card-oseano"><h3 class="ct"><span class="dot"></span>Hidro-Oseanografi: Eksisting vs Pasca-Reklamasi</h3>
+          <p class="cd">Reklamasi dapat dilakukan dengan mitigasi abrasi dan sedimentasi.</p>
+          <div class="tw"><table class="t" id="tb-oseano" data-source="hidrooceanografi" data-row-key="no"><thead><tr><th data-field="parameter">Parameter</th><th data-field="eksisting">Eksisting</th><th data-field="pasca_reklamasi">Pasca-Reklamasi</th><th data-field="keterangan">Keterangan</th></tr></thead><tbody></tbody></table></div></div>
+      </div>
+    </div>
+
+    <div class="sub" id="eks-ekologi" hidden>
+      <div class="grid g-3">
+        <div class="card lift anim" style="--i:1" id="card-mangrove"><h3 class="ct"><span class="dot"></span>Ekosistem Mangrove</h3>
+          <p class="cd">Serapan karbon &amp; perlindungan pesisir.</p>
+          <div class="mini"><div><div class="mini-v" data-source="kpi" data-field="luas_mangrove_ha" data-row="0" data-fmt="1">—</div><div class="mini-l">ha luas mangrove</div></div>
+            <div><div class="mini-v" data-source="kpi" data-field="potensi_karbon_mangrove_tonco2e" data-row="0" data-fmt="2">—</div><div class="mini-l">ton CO₂e stok karbon</div></div></div></div>
+        <div class="card lift anim" style="--i:2" id="card-kabel"><h3 class="ct"><span class="dot"></span>Kabel Laut &amp; Kampung Tua</h3>
+          <p class="cd">Keamanan infrastruktur &amp; identitas sosial pesisir.</p>
+          <div class="mini"><div><div class="mini-v" data-source="kpi" data-field="jarak_kabel_laut_terdekat_m" data-row="0" data-fmt="0">—</div><div class="mini-l">m jarak kabel laut terdekat</div></div>
+            <div><div class="mini-v" data-source="kpi" data-field="luas_kampung_tua_tanjung_uma_m2" data-row="0" data-fmt="0">—</div><div class="mini-l">m² Kampung Tua Tanjung Uma</div></div></div></div>
+        <div class="card lift anim" style="--i:3" id="card-kt"><h3 class="ct"><span class="dot"></span>Elemen Penanganan Kampung Tua</h3>
+          <p class="cd">Tanjung Uma, Kec. Lubuk Baja.</p><ol class="nl" id="ls-kt" data-source="kampung_tua_elemen"></ol></div>
+      </div>
+      <div class="card anim" style="--i:4; margin-top:16px" id="card-rth"><h3 class="ct"><span class="dot"></span>RTH Pengganti Mangrove — Skenario</h3>
+        <p class="cd">Kebutuhan RTH darat pengganti bila fungsi ekologis mangrove dialihkan.</p>
+        <div class="tw"><table class="t" id="tb-rth" data-source="mangrove_rth" data-row-key="skenario"><thead><tr><th data-field="skenario">Skenario</th><th data-field="luas_mangrove_ha">Luas Mangrove (ha)</th><th data-field="luas_rth_pengganti_ha">RTH Pengganti (ha)</th><th data-field="rasio_penggantian">Rasio</th></tr></thead><tbody></tbody></table></div></div>
+    </div>
+  </section>
+
+  <!-- ================= TAB 3: MASTERPLAN & DISTRIK ================= -->
+  <section class="tab" id="tab-masterplan" hidden>
+    <div class="grid g-kpi">
+      <div class="kpi anim" style="--i:0"><div class="kpi-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16v16H4z"/></svg></div>
+        <div class="kpi-v" data-source="blok_ringkasan" data-field="total_luas_ha" data-row="0" data-fmt="2">—</div><div class="kpi-l">Luas rencana blok (ha)</div></div>
+      <div class="kpi anim" style="--i:1"><div class="kpi-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="8" height="8"/><rect x="13" y="13" width="8" height="8"/></svg></div>
+        <div class="kpi-v" data-source="blok_ringkasan" data-field="jumlah_blok" data-row="0" data-fmt="0">—</div><div class="kpi-l">Blok / kapling</div></div>
+      <div class="kpi anim" style="--i:2"><div class="kpi-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a7 7 0 0 0-7 7c0 6 7 13 7 13s7-7 7-13a7 7 0 0 0-7-7z"/></svg></div>
+        <div class="kpi-v" data-source="blok_ringkasan" data-field="jumlah_zona" data-row="0" data-fmt="0">—</div><div class="kpi-l">Jenis zona</div></div>
+      <div class="kpi anim" style="--i:3"><div class="kpi-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22c5-3 8-7 8-12a8 8 0 0 0-16 0c0 5 3 9 8 12z"/></svg></div>
+        <div class="kpi-v" data-source="kpi" data-field="luas_rth_total_ha" data-row="0" data-fmt="0">—</div><div class="kpi-l">RTH total masterplan (ha)</div></div>
+      <div class="kpi anim" style="--i:4"><div class="kpi-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 20h20M5 20V10l7-5 7 5v10"/></svg></div>
+        <div class="kpi-v" data-source="kpi" data-field="luas_lantai_bangunan_m2" data-row="0" data-fmt="0">—</div><div class="kpi-l">Luas lantai bangunan (m²)</div></div>
+      <div class="kpi anim" style="--i:5"><div class="kpi-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 17h18l-2 4H5z"/><path d="M12 3v14M12 3l6 6H12"/></svg></div>
+        <div class="kpi-v" data-source="kpi" data-field="kapasitas_pelabuhan_logistik_teus" data-row="0" data-fmt="0">—</div><div class="kpi-l">Kapasitas logistik (TEUs)</div></div>
+    </div>
+
+    <div class="seg anim" style="--i:6" id="seg-mp">
+      <button class="on" data-sub="mp-blok">Rencana Blok Zona Tanjung Pinggir</button>
+      <button data-sub="mp-distrik">Distrik Masterplan</button>
+    </div>
+
+    <div class="sub" id="mp-blok">
+      <div class="grid g-split">
+        <div class="card mapcard anim" style="--i:7" id="card-peta-blok">
+          <div class="mapcard-h"><div>
+            <h3 class="ct"><span class="dot"></span>Peta Rencana Blok Zona — Tanjung Pinggir</h3>
+            <p class="cd" style="margin-bottom:0">Warna zona mengikuti legenda zonasi pada dokumen rancangan (konvensi RDTR). Arahkan kursor ke daftar zona di kanan untuk menyorot, klik untuk menyembunyikan/menampilkan.</p>
+          </div></div>
+          <div class="mapwrap" id="mw-blok" data-source="geo_daratan geo_blokzona geo_deliniasi geo_admin geo_jalan">
+            <div class="lmap sm" id="map-blok"></div>
+            <div class="mp mp-status" id="st-blok">Memuat rencana blok…</div>
+          </div>
+        </div>
+        <div class="card anim" style="--i:8" id="card-zona">
+          <h3 class="ct"><span class="dot"></span>Luas per Zona</h3>
+          <p class="cd">Legenda interaktif: panjang batang = luas (ha); angka = luas &amp; porsi.</p>
+          <div class="zb" id="zb-full" data-source="blok_luas_zona"></div>
+          <div class="note">Kapling “Belum Teridentifikasi” adalah poligon tanpa atribut zona pada shapefile (umumnya kapling kecil); tetap ditampilkan agar tidak ada blok yang hilang.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sub" id="mp-distrik" hidden>
+      <div class="card anim" style="--i:7" id="card-distrik">
+        <h3 class="ct"><span class="dot"></span>Pembagian Distrik Masterplan</h3>
+        <p class="cd">9 distrik, total ± 2.734 ha. Arahkan kursor ke batang untuk fungsi utama.</p>
+        <div class="chart" id="ch-distrik" data-source="distrik"></div>
+        <div class="tw" style="margin-top:12px"><table class="t" id="tb-distrik" data-source="distrik" data-row-key="nama"><thead><tr><th data-field="nama">Distrik</th><th data-field="luas_ha">Luas (ha)</th><th data-field="fungsi_utama">Fungsi Utama</th></tr></thead><tbody></tbody></table></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= TAB: SURVEY DRONE & AKURASI ================= -->
+  <section class="tab" id="tab-drone" hidden>
+    <div class="grid g-kpi">
+      <div class="kpi anim" style="--i:0"><div class="kpi-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18M15 3v18" opacity=".55"/></svg></div>
+        <div class="kpi-v" data-source="drone_meta" data-field="gsd_cm" data-row="0" data-fmt="0">—</div><div class="kpi-l">Resolusi citra / GSD (cm)</div></div>
+      <div class="kpi anim" style="--i:1"><div class="kpi-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v5M12 17v5M2 12h5M17 12h5"/></svg></div>
+        <div class="kpi-v" data-source="drone_meta" data-field="jumlah_icp" data-row="0" data-fmt="0">—</div><div class="kpi-l">Titik uji ICP · <span data-source="drone_meta" data-field="jumlah_icp_diuji" data-row="0" data-fmt="0">—</span> punya data uji</div></div>
+      <div class="kpi anim" style="--i:2"><div class="kpi-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2 4 22h16z"/></svg></div>
+        <div class="kpi-v" data-source="drone_meta" data-field="jumlah_gcp" data-row="0" data-fmt="0">—</div><div class="kpi-l">Titik kontrol GCP</div></div>
+      <div class="kpi anim" style="--i:3"><div class="kpi-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12h16M12 4v16"/></svg></div>
+        <div class="kpi-v" data-source="drone_akurasi" data-field="rmse_h" data-row="0" data-fmt="3">—</div><div class="kpi-l">RMSE horizontal (m)</div></div>
+      <div class="kpi anim" style="--i:4"><div class="kpi-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/></svg></div>
+        <div class="kpi-v" data-source="drone_akurasi" data-field="ce90" data-row="0" data-fmt="3">—</div><div class="kpi-l">CE90 horizontal (m)</div></div>
+      <div class="kpi anim" style="--i:5"><div class="kpi-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v18M8 7l4-4 4 4M8 17l4 4 4-4"/></svg></div>
+        <div class="kpi-v" data-source="drone_akurasi" data-field="rmse_v" data-row="0" data-fmt="3">—</div><div class="kpi-l">RMSE vertikal (m)</div></div>
+      <div class="kpi anim" style="--i:6"><div class="kpi-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20h16M7 20V10M12 20V5M17 20v-7"/></svg></div>
+        <div class="kpi-v" data-source="drone_akurasi" data-field="le90" data-row="0" data-fmt="3">—</div><div class="kpi-l">LE90 vertikal (m)</div></div>
+    </div>
+
+    <div class="grid g-split">
+      <div class="card mapcard anim" style="--i:7" id="card-peta-drone">
+        <div class="mapcard-h"><div>
+          <h3 class="ct"><span class="dot"></span>Peta Survey Drone — Titik Uji Akurasi</h3>
+          <p class="cd" style="margin-bottom:0">Delineasi WPP &amp; distrik, 16 titik kontrol (GCP) dari data KML, dan titik uji (ICP) yang diwarnai menurut besar kesalahan horizontalnya. Klik titik untuk melihat selisih koordinat ortofoto &amp; DSM.</p>
+        </div><span class="pill">Peta dasar citra satelit</span></div>
+        <div class="mapwrap" id="mw-drone" data-source="geo_daratan geo_deliniasi geo_admin drone_icp drone_titik_kml">
+          <div class="lmap sm" id="map-drone"></div>
+          <div class="mp mp-status" id="st-drone">Memuat data survey…</div>
+        </div>
+      </div>
+      <div class="card anim" style="--i:8" id="card-kelas">
+        <h3 class="ct"><span class="dot"></span>Ketelitian Horizontal Peta Skala <span data-source="drone_meta" data-field="skala_uji" data-row="0">—</span></h3>
+        <p class="cd">Hasil uji CE90 dibanding ambang Kelas 1–3 pada formulir uji ketelitian (CE90 = 1,5175 × RMSE<sub>r</sub>).</p>
+        <div class="verdict"><span class="verdict-k">Horizontal</span><span class="verdict-v" id="vd-h" data-source="drone_kelas" data-field="kelas_horizontal" data-row="0">—</span></div>
+        <div class="gauge" id="gg-h" data-source="drone_akurasi drone_meta"></div>
+        <div class="note">Uji kelas ketelitian ditampilkan untuk komponen horizontal; nilai vertikal (RMSE &amp; LE90) tetap ditampilkan sebagai angka pada kartu statistik di atas. Nilai dihitung ulang dari data tiap titik pada file akurasi dan sama dengan hasil di formulir.</div>
+      </div>
+    </div>
+
+    <div class="grid g-2" style="margin-top:16px">
+      <div class="card lift anim" style="--i:9" id="card-resid"><h3 class="ct"><span class="dot"></span>Selisih Koordinat per Titik Uji</h3>
+        <p class="cd">ΔX, ΔY (ortofoto − ICP) dan ΔZ (DSM − ICP) dalam meter. Arahkan kursor ke batang untuk detail.</p>
+        <div class="chart" id="ch-resid" data-source="drone_icp"></div></div>
+      <div class="card lift anim" style="--i:10" id="card-scatter"><h3 class="ct"><span class="dot"></span>Sebaran Kesalahan Horizontal</h3>
+        <p class="cd">Posisi ΔX–ΔY tiap titik terhadap lingkaran RMSE dan CE90.</p>
+        <div class="chart" id="ch-scatter" data-source="drone_icp drone_akurasi"></div></div>
+    </div>
+
+    <div class="card anim" style="--i:11; margin-top:16px" id="card-icp"><h3 class="ct"><span class="dot"></span>Tabel Titik Uji (ICP)</h3>
+      <p class="cd">Koordinat UTM zona 48N (m). Selisih = nilai ortofoto/DSM − nilai ICP.</p>
+      <div class="tw"><table class="t" id="tb-icp" data-source="drone_icp" data-row-key="titik"><thead><tr>
+        <th data-field="titik">Titik</th><th data-field="x_icp">X ICP</th><th data-field="y_icp">Y ICP</th><th data-field="dx">ΔX (m)</th><th data-field="dy">ΔY (m)</th><th data-field="dxy">Residual XY (m)</th><th data-field="z_icp">Z ICP (m)</th><th data-field="z_dsm">Z DSM (m)</th><th data-field="dz">ΔZ (m)</th>
+      </tr></thead><tbody></tbody></table></div>
+    </div>
+  </section>
+
+  <!-- ================= TAB 4: VIDEO ================= -->
+  <section class="tab" id="tab-media" hidden>
+    <div class="grid g-2">
+      <div class="card lift anim" style="--i:0" id="card-vid-1">
+        <h3 class="ct"><span class="dot"></span>Pemodelan Hidro-Oseanografi</h3>
+        <p class="cd">Animasi kecepatan arus, arah potensi abrasi, dan pola sedimentasi di perairan sekitar rencana reklamasi.</p>
+        <video class="vid" controls preload="metadata" poster="media/frame_batimetri.jpg"><source src="media/batimetri.mp4" type="video/mp4"></video>
+      </div>
+      <div class="card lift anim" style="--i:1" id="card-vid-2">
+        <h3 class="ct"><span class="dot"></span>Kondisi Lingkungan &amp; Sosial</h3>
+        <p class="cd">Foto udara permukiman Kampung Tua (Tanjung Uma, Mentarau, Patam Lestari) di wilayah studi.</p>
+        <video class="vid" controls preload="metadata" poster="media/frame_lingkungan.jpg"><source src="media/lingkungan.mp4" type="video/mp4"></video>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= LIGHTBOX ================= -->
+  <div class="lb" id="lb" hidden role="dialog" aria-modal="true" aria-label="Pratinjau gambar">
+    <div class="lb-top">
+      <span class="lb-count" id="lb-count"></span><span class="lb-sp"></span>
+      <button class="lb-btn" id="lb-out" title="Perkecil"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M8 11h6M20 20l-4-4"/></svg></button>
+      <button class="lb-btn" id="lb-in" title="Perbesar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M8 11h6M11 8v6M20 20l-4-4"/></svg></button>
+      <button class="lb-btn" id="lb-fit" title="Paskan layar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+      <button class="lb-btn" id="lb-x" title="Tutup (Esc)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+    </div>
+    <div class="lb-stage" id="lb-stage">
+      <img class="lb-img" id="lb-img" alt="">
+      <button class="lb-btn lb-nav lb-prev" id="lb-prev" title="Sebelumnya"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="m15 5-7 7 7 7"/></svg></button>
+      <button class="lb-btn lb-nav lb-next" id="lb-next" title="Berikutnya"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="m9 5 7 7-7 7"/></svg></button>
+      <div class="lb-load" id="lb-load" hidden>Memuat resolusi penuh…</div>
+    </div>
+    <div class="lb-cap"><h4 id="lb-t"></h4><p id="lb-d"></p><div class="lb-hint">Scroll / tombol untuk zoom · seret untuk menggeser · klik ganda untuk zoom cepat · ← → berpindah gambar</div></div>
+  </div>
+
+  <div class="credit">Developed by Fardani&#64;2026</div>
+</div>
+<script src="leaflet.js"></script>
+<script src="d3.min.js"></script>
+<script src="data.js"></script>
+<script src="dash-shim.js"></script>
+<script>
+/* ======================= calculations ======================= */
+dash.calc('blok_luas_zona', {
+  inputs: ['geo_blokzona'],
+  title: 'Luas per zona rencana blok',
+  description: 'Jumlah luas (ha), banyak blok, dan porsi luas tiap zona pada peta rencana blok Tanjung Pinggir.',
+  fn: (geo_blokzona) => {
+    const m = new Map();
+    for (const r of geo_blokzona) {
+      const o = m.get(r.zona) || { zona: r.zona, luas_ha: 0, jumlah_blok: 0 };
+      o.luas_ha += Number(r.luas_ha) || 0; o.jumlah_blok += 1; m.set(r.zona, o);
+    }
+    const total = [...m.values()].reduce((s, o) => s + o.luas_ha, 0);
+    return [...m.values()]
+      .map((o) => ({ zona: o.zona, luas_ha: Math.round(o.luas_ha * 100) / 100, jumlah_blok: o.jumlah_blok, persen: Math.round((o.luas_ha / total) * 1000) / 10 }))
+      .sort((a, b) => b.luas_ha - a.luas_ha);
+  },
+});
+dash.calc('blok_ringkasan', {
+  inputs: ['blok_luas_zona'],
+  title: 'Ringkasan rencana blok',
+  description: 'Total luas, jumlah blok, dan jumlah jenis zona (tanpa kapling belum teridentifikasi).',
+  fn: (blok_luas_zona) => [{
+    total_luas_ha: Math.round(blok_luas_zona.reduce((s, r) => s + r.luas_ha, 0) * 100) / 100,
+    jumlah_blok: blok_luas_zona.reduce((s, r) => s + r.jumlah_blok, 0),
+    jumlah_zona: blok_luas_zona.filter((r) => r.zona !== 'Belum Teridentifikasi').length,
+  }],
+});
+dash.calc('drone_akurasi', {
+  inputs: ['drone_icp'],
+  title: 'Akurasi ortofoto & DSM',
+  description: 'RMSE dari titik uji ICP; CE90 = 1,5175 × RMSE horizontal dan LE90 = 1,6499 × RMSE vertikal.',
+  fn: (drone_icp) => {
+    const n = drone_icp.length;
+    const rh = Math.sqrt(drone_icp.reduce((s, r) => s + Number(r.dx) ** 2 + Number(r.dy) ** 2, 0) / n);
+    const rv = Math.sqrt(drone_icp.reduce((s, r) => s + Number(r.dz) ** 2, 0) / n);
+    const r4 = (x) => Math.round(x * 10000) / 10000;
+    return [{ jumlah_icp: n, rmse_h: r4(rh), ce90: r4(1.5175 * rh), rmse_v: r4(rv), le90: r4(1.6499 * rv),
+      max_dxy: r4(Math.max(...drone_icp.map((r) => Number(r.dxy)))), max_abs_dz: r4(Math.max(...drone_icp.map((r) => Math.abs(Number(r.dz))))) }];
+  },
+});
+dash.calc('drone_kelas', {
+  inputs: ['drone_akurasi', 'drone_meta'],
+  title: 'Kelas ketelitian horizontal',
+  description: 'Kelas ketelitian horizontal dibanding ambang CE90 Kelas 1-3 pada formulir uji.',
+  fn: (drone_akurasi, drone_meta) => {
+    const a = drone_akurasi[0], m = drone_meta[0];
+    const v = Number(a.ce90);
+    return [{ kelas_horizontal: v <= Number(m.ce90_kelas1) ? 'Kelas 1' : v <= Number(m.ce90_kelas2) ? 'Kelas 2' : v <= Number(m.ce90_kelas3) ? 'Kelas 3' : 'Di luar Kelas 3' }];
+  },
+});
+dash.calc('jalan_per_fungsi', {
+  inputs: ['geo_jalan'],
+  title: 'Panjang jalan per fungsi',
+  description: 'Jumlah panjang ruas (km) dan banyak ruas per fungsi jalan di dalam WPP.',
+  fn: (geo_jalan) => {
+    const m = new Map();
+    for (const r of geo_jalan) {
+      const o = m.get(r.fungsi) || { fungsi: r.fungsi, panjang_km: 0, jumlah_ruas: 0 };
+      o.panjang_km += Number(r.panjang_km) || 0; o.jumlah_ruas += 1; m.set(r.fungsi, o);
+    }
+    return [...m.values()].map((o) => ({ ...o, panjang_km: Math.round(o.panjang_km * 100) / 100 })).sort((a, b) => b.panjang_km - a.panjang_km);
+  },
+});
+
+</script>
+<script>
+(function () {
+  'use strict';
+  const ROOT = document.getElementById('jtp');
+  const $ = (s, r) => (r || ROOT).querySelector(s);
+  const $$ = (s, r) => Array.from((r || ROOT).querySelectorAll(s));
+  const REDUCE = (() => { try { return matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { return false; } })();
+  const NF = {};
+  const fmt = (v, d) => {
+    const n = Number(v); if (v === null || v === undefined || v === '' || isNaN(n)) return '—';
+    const k = d == null ? 2 : d; NF[k] = NF[k] || new Intl.NumberFormat('id-ID', { maximumFractionDigits: k });
+    return NF[k].format(n);
+  };
+  const st = (id) => { const d = dash.data(id); return d ? d.status : 'missing'; };
+  const rowsOf = (id) => {
+    const d = dash.data(id); if (!d || d.status !== 'ok') return null;
+    const x = d.data; return Array.isArray(x) ? x : (x && Array.isArray(x.rows) ? x.rows : null);
+  };
+  const mk = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+
+  /* ======================= cartographic palettes ======================= */
+  // Zona: warna diambil dari legenda zonasi dokumen rancangan arsitek (konvensi warna RDTR).
+  const ZONA = [
+    ['Zona Perumahan', '#FDDF29'], ['Zona Perdagangan dan Jasa', '#F9767E'], ['Zona Campuran', '#F37044'],
+    ['Zona Pariwisata', '#F39FEC'], ['Zona Perkantoran', '#B1ABAB'], ['Zona Sarana Pelayanan Umum', '#914295'],
+    ['Zona Kawasan Industri', '#D5343C'], ['Zona Pergudangan', '#8A3231'], ['Zona Transportasi', '#B5340C'],
+    ['Zona Ruang Terbuka Hijau', '#4ECD80'], ['Zona Hutan Lindung', '#5D8056'], ['Badan Air', '#A9E9F5'],
+    ['Jalan', '#8C8C8C'], ['Belum Teridentifikasi', '#E7E1D3'],
+  ];
+  const ZC = Object.fromEntries(ZONA);
+  const ROAD = {
+    JAP: ['Arteri Primer', '#B71C1C', 4.2], JAS: ['Arteri Sekunder', '#D32F2F', 3.6],
+    JKP: ['Kolektor Primer', '#E65100', 3.0], JKS: ['Kolektor Sekunder', '#F57C00', 2.6],
+    JLS: ['Lokal Sekunder', '#E0A800', 1.8], 'JLING.S': ['Lingkungan', '#8F99A4', 0.9],
+  };
+  const KARHUTLA = [['Rendah', '#FFFFB2'], ['Sedang', '#FECC5C'], ['Tinggi', '#FD8D3C'], ['Sangat Tinggi', '#E31A1C']];
+  const MANGROVE = [['Mangrove Jarang', '#C7E9C0'], ['Mangrove Sedang', '#74C476'], ['Mangrove Lebat', '#1B7837']];
+  const HUTAN = [['HL', 'Hutan Lindung', '#2E7D32'], ['HPT', 'Hutan Produksi Terbatas', '#9CCC65'], ['HP', 'Hutan Produksi', '#F2E14C'],
+    ['HPK', 'Hutan Produksi Konversi', '#F48FB1'], ['TWA', 'Taman Wisata Alam', '#8E24AA'], ['TB', 'Taman Buru', '#BA68C8'],
+    ['APL', 'Areal Penggunaan Lain', '#F3F1EC'], ['AIR', 'Tubuh Air', '#90CAF9']];
+  const HC = Object.fromEntries(HUTAN.map((h) => [h[0], h[2]]));
+  const HN = Object.fromEntries(HUTAN.map((h) => [h[0], h[1]]));
+  const ZNT = [['3', 'Rp200 rb – 500 rb', '#EFEDF5'], ['4', 'Rp500 rb – 1 jt', '#DADAEB'], ['5', 'Rp1 – 2 jt', '#BCBDDC'],
+    ['6', 'Rp2 – 5 jt', '#9E9AC8'], ['7', 'Rp5 – 10 jt', '#756BB1'], ['8', 'Rp10 – 20 jt', '#54278F']];
+  const ZNTC = Object.fromEntries(ZNT.map((z) => [z[0], z[2]]));
+  const PORT = [['Internasional dan Domestik', '#12477D'], ['Internasional', '#0A2E52'], ['Domestik', '#1E73BE'], ['Logistik', '#8A5A2B'], ['PELNI', '#0E7C86'], ['Perintis', '#6B7A8C']];
+  const portColor = (j) => { const s = String(j || ''); if (s.includes('Internasional dan Domestik')) return PORT[0][1]; if (s.includes('Internasional')) return PORT[1][1];
+    if (s.includes('Logistik')) return PORT[3][1]; if (s.includes('PELNI')) return PORT[4][1]; if (s.includes('Perintis')) return PORT[5][1]; if (s.includes('Domestik')) return PORT[2][1]; return '#555'; };
+  const BASE = {
+    light: { label: 'Terang', land: '#F4F1EA', coast: '#9FBACB', kel: '#8C8C8C', adm: '#2F3B48', sea: '#CFE3EE' },
+    dark: { label: 'Gelap', land: '#1E2C3C', coast: '#355572', kel: '#6E8296', adm: '#CFE2F5', sea: '#0E1B2B' },
+    osm: { label: 'OpenStreetMap', tile: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', attr: '&copy; Kontributor OpenStreetMap',
+      land: '#F4F1EA', coast: '#9FBACB', kel: '#5A6472', adm: '#1F2A37', sea: '#AAD3DF' },
+    sat: { label: 'Citra satelit', tile: 'https://mt0.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', attr: 'Citra &copy; Google', maxZoom: 20,
+      land: '#F4F1EA', coast: '#9FBACB', kel: '#FFFFFF', adm: '#FFE082', sea: '#143C52' },
+  };
+  const TILE_BASE = (k) => !!BASE[k].tile;
+  const titleCase = (s) => String(s || '').toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
+  const distrikLabel = (z) => { const m = /DISTRICT\s*(\d+)\s*\(([^)]*)\)(.*)/i.exec(String(z || '')); if (!m) return titleCase(z);
+    const rest = m[3] && /DISTRICT\s*(\d+)/i.exec(m[3]); return 'D' + m[1] + (rest ? '–' + rest[1] : '') + ' · ' + titleCase(m[2].trim()); };
+
+  /* ======================= geo helpers ======================= */
+  const FCACHE = {};
+  function featuresOf(id) {
+    const rows = rowsOf(id); if (!rows) return null;
+    if (FCACHE[id] && FCACHE[id].src === rows) return FCACHE[id].f;
+    const f = [];
+    for (const r of rows) {
+      let g = r.geom; if (typeof g === 'string') { try { g = JSON.parse(g); } catch (e) { g = null; } }
+      if (!g) continue;
+      const p = {}; for (const k in r) if (k !== 'geom') p[k] = r[k];
+      f.push({ type: 'Feature', properties: p, geometry: g });
+    }
+    FCACHE[id] = { src: rows, f }; return f;
+  }
+  function popupEl(title, kicker, pairs, color) {
+    const box = mk('div', 'pp'); const h = mk('div', 'pp-h');
+    if (color) { const s = mk('span', 'sw'); s.style.background = color; h.append(s); }
+    h.append(document.createTextNode(title == null || title === '' ? '—' : String(title))); box.append(h);
+    if (kicker) box.append(mk('div', 'pp-k', kicker));
+    const t = mk('table');
+    pairs.forEach(([k, v]) => { if (v === undefined) return; const tr = mk('tr'); tr.append(mk('td', null, k), mk('td', null, v == null || v === '' ? '—' : String(v))); t.append(tr); });
+    box.append(t); return box;
+  }
+  const ttEl = (b, s) => { const d = mk('div'); d.append(mk('b', null, b == null || b === '' ? '—' : String(b))); if (s) { d.append(mk('br')); d.append(document.createTextNode(s)); } return d; };
+
+  /* ---------- tema & overlay definitions ---------- */
+  function zonaStyle(state) {
+    return (f) => {
+      const z = f.properties.zona; const hid = state.hidden.has(z); const hl = state.hl;
+      const dim = hl && hl !== z;
+      const isLot = z === 'Belum Teridentifikasi';
+      return { fillColor: ZC[z] || '#cccccc', fillOpacity: hid ? 0 : (dim ? state.op * 0.18 : state.op),
+        color: hid ? 'transparent' : (hl === z ? '#0A2E52' : (isLot ? '#B9B09C' : '#FFFFFF')), weight: hl === z ? 1.4 : (isLot ? 0.4 : 0.6), opacity: dim ? 0.25 : 0.9 };
+    };
+  }
+  const THEMES = {
+    blokzona: { ds: 'geo_blokzona', label: 'Rencana Blok Zona', star: true,
+      style: (st8) => zonaStyle(st8),
+      tip: (p) => ttEl(p.zona, fmt(p.luas_ha, 2) + ' ha'),
+      pop: (p) => popupEl(p.zona, 'Rencana blok zona · Tanjung Pinggir', [['Zona', p.zona], ['Luas', fmt(p.luas_ha, 3) + ' ha'], ['Luas (m²)', fmt(Number(p.luas_ha) * 10000, 0)]], ZC[p.zona]) },
+    sk_hutan: { ds: 'geo_sk_hutan', label: 'Fungsi Kawasan Hutan (SK 10778/2025)',
+      style: (s) => (f) => ({ fillColor: HC[f.properties.fungsi] || '#ddd', fillOpacity: s.op, color: '#5E6B5E', weight: 0.5, opacity: 0.6 }),
+      tip: (p) => ttEl(HN[p.fungsi] || p.fungsi, 'Pulau ' + titleCase(p.pulau)),
+      pop: (p) => popupEl(HN[p.fungsi] || p.fungsi, 'SK 10778/2025 · Kawasan hutan', [['Fungsi 2025', p.fungsi], ['Fungsi 2020', p.fungsi_2020], ['Perubahan', p.perubahan], ['Pulau', titleCase(p.pulau)], ['Luas (dalam peta)', fmt(p.luas_ha, 2) + ' ha']], HC[p.fungsi]) },
+    mangrove: { ds: 'geo_mangrove', label: 'Kerapatan Mangrove',
+      style: (s) => (f) => ({ fillColor: (MANGROVE.find((m) => m[0] === f.properties.kerapatan) || [0, '#74C476'])[1], fillOpacity: s.op, color: '#2E5E3A', weight: 0.4, opacity: 0.6 }),
+      tip: (p) => ttEl(p.kerapatan, fmt(p.luas_ha, 2) + ' ha'),
+      pop: (p) => popupEl(p.kerapatan, 'Peta mangrove', [['Kerapatan', p.kerapatan], ['Fungsi kawasan', titleCase(p.fungsi_kawasan)], ['Luas (dalam peta)', fmt(p.luas_ha, 2) + ' ha']]) },
+    znt: { ds: 'geo_znt', label: 'Zona Nilai Tanah (ZNT)',
+      style: (s) => (f) => ({ fillColor: ZNTC[String(f.properties.kelas_nilai)] || '#ccc', fillOpacity: s.op, color: '#FFFFFF', weight: 0.5, opacity: 0.8 }),
+      tip: (p) => ttEl('Kelas ' + p.kelas_nilai, 'Rp ' + (p.rentang_rp_m2 || '–') + ' /m²'),
+      pop: (p) => popupEl('Kelas nilai ' + p.kelas_nilai, 'Zona Nilai Tanah · BPN', [['No. zona', p.nozn], ['Rentang nilai (Rp/m²)', p.rentang_rp_m2], ['Tanggal SK', p.tgl_sk]], ZNTC[String(p.kelas_nilai)]) },
+    karhutla: { ds: 'geo_karhutla', label: 'Kerawanan Kebakaran Hutan & Lahan',
+      style: (s) => (f) => ({ fillColor: (KARHUTLA.find((k) => k[0] === f.properties.kelas) || [0, '#ccc'])[1], fillOpacity: s.op, color: '#8A4B12', weight: 0.3, opacity: 0.5 }),
+      tip: (p) => ttEl('Kerawanan ' + p.kelas, fmt(p.luas_ha, 2) + ' ha'),
+      pop: (p) => popupEl('Kerawanan ' + p.kelas, 'Rawan karhutla Kota Batam', [['Kelas', p.kelas], ['Luas (dalam peta)', fmt(p.luas_ha, 2) + ' ha']]) },
+    kumuh: { ds: 'geo_kumuh', label: 'Permukiman Kumuh (SK)',
+      style: (s) => () => ({ fillColor: '#C62828', fillOpacity: Math.min(0.75, s.op * 0.6), color: '#7F0000', weight: 1, opacity: 0.9 }),
+      tip: (p) => ttEl('Kumuh · ' + titleCase(p.kelurahan), 'RT/RW ' + (p.kode_rt_rw || '–')),
+      pop: (p) => popupEl('Kawasan kumuh', 'Penetapan permukiman kumuh', [['Kelurahan', titleCase(p.kelurahan)], ['Kecamatan', titleCase(p.kecamatan)], ['RT/RW', p.kode_rt_rw], ['SK', p.sk_kumuh], ['Luas', fmt(p.luas_ha, 2) + ' ha']], '#C62828') },
+    none: { ds: null, label: 'Tanpa tema' },
+  };
+  const OVERLAYS = {
+    deliniasi: { ds: 'geo_deliniasi', label: 'Delineasi WPP & distrik' },
+    admin: { ds: 'geo_admin', label: 'Kelurahan dalam WPP' },
+    kelurahan: { ds: 'geo_kelurahan', label: 'Batas kelurahan sekitar' },
+    jalan: { ds: 'geo_jalan', label: 'Jaringan jalan' },
+    kabel: { ds: 'geo_kabel_pipa', label: 'Kabel/pipa bawah laut' },
+    pelabuhan: { ds: 'geo_pelabuhan', label: 'Pelabuhan' },
+    icp: { ds: 'drone_icp', label: 'Titik uji ICP' },
+    gcp: { ds: 'drone_titik_kml', label: 'Titik kontrol GCP' },
+  };
+  const GCP_C = '#1565C0';
+  const GCP_SVG = '<svg class="gcp-ic" viewBox="0 0 22 22" width="22" height="22"><path d="M11 2.5 20 18.5H2z" fill="' + GCP_C + '" stroke="#fff" stroke-width="2" stroke-linejoin="round"/><circle cx="11" cy="14" r="1.8" fill="#fff"/></svg>';
+  const ICP_CLS = [[0.1, '#1A9850', '< 0,10 m'], [0.25, '#91CF60', '0,10 – 0,25 m'], [0.5, '#FC8D59', '0,25 – 0,50 m'], [Infinity, '#D73027', '> 0,50 m']];
+  const icpColor = (d) => (ICP_CLS.find((c) => Number(d) < c[0]) || ICP_CLS[3])[1];
+  const ANCHOR = '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round"><circle cx="12" cy="5" r="2"/><path d="M12 7v14M5 13a7 7 0 0 0 14 0M8 10h8"/></svg>';
+
+  /* ======================= map controller ======================= */
+  function createMapCtl(cfg) {
+    const el = document.getElementById(cfg.el);
+    const wrap = el.parentElement;
+    const status = document.getElementById(cfg.status);
+    const map = L.map(el, { preferCanvas: true, zoomSnap: 0.25, zoomDelta: 0.5, minZoom: 11, maxZoom: 19, scrollWheelZoom: false,
+      maxBounds: L.latLngBounds([1.0, 103.80], [1.25, 104.16]), maxBoundsViscosity: 0.8, attributionControl: true });
+    map.attributionControl.setPrefix('Leaflet');
+    map.attributionControl.addAttribution('Data spasial: studi FS &amp; Masterplan WPP Jodoh–Tanjung Pinggir');
+    map.fitBounds(L.latLngBounds([1.108, 103.914], [1.158, 104.009]), { padding: [10, 10] });
+    map.createPane('pts').style.zIndex = 620;
+    const R = L.canvas({ padding: 0.4, tolerance: 5 });
+    L.control.scale({ metric: true, imperial: false, position: 'bottomright', maxWidth: 140 }).addTo(map);
+    map.on('click', () => map.scrollWheelZoom.enable());
+    el.addEventListener('mouseleave', () => map.scrollWheelZoom.disable());
+    const zoomCls = () => el.classList.toggle('lowz', map.getZoom() < 13.5);
+    map.on('zoomend', zoomCls); zoomCls();
+
+    const S = { theme: cfg.theme, op: 0.82, hidden: new Set(), hl: null, base: cfg.base || 'light', on: new Set(cfg.overlaysOn), built: {}, layers: {}, labels: {}, tiles: {}, tilesBlocked: false };
+
+    // north arrow + coordinates
+    const north = mk('div', 'mp mp-north'); north.innerHTML = '<svg viewBox="0 0 26 40"><path d="M13 2 22 30 13 24 4 30z" fill="#0A2E52"/><path d="M13 2 13 24 4 30z" fill="#3B8FD9"/><text x="13" y="39" text-anchor="middle" font-size="10" font-weight="700" fill="#0A2E52">U</text></svg>';
+    const coord = mk('div', 'mp mp-coord', '—');
+    wrap.append(north, coord);
+    map.on('mousemove', (e) => { coord.textContent = e.latlng.lat.toFixed(5) + '°, ' + e.latlng.lng.toFixed(5) + '° · zoom ' + map.getZoom().toFixed(1); });
+
+    // legend
+    const legend = mk('div', 'mp mp-legend' + (cfg.legendCollapsed ? ' col' : '')); wrap.append(legend);
+    L.DomEvent.disableClickPropagation(legend); L.DomEvent.disableScrollPropagation(legend);
+
+    // layer panel
+    const panel = mk('div', 'mp mp-layers' + (cfg.collapsed ? ' col' : ''));
+    const ph = mk('div', 'mp-h'); ph.append(mk('span', null, cfg.panelTitle || 'Layer & Tema Peta'));
+    const chev = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); chev.setAttribute('viewBox', '0 0 24 24'); chev.innerHTML = '<path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.2"/>'; ph.append(chev);
+    ph.addEventListener('click', () => panel.classList.toggle('col'));
+    const pb = mk('div', 'mp-b'); panel.append(ph, pb); wrap.append(panel);
+    L.DomEvent.disableClickPropagation(panel); L.DomEvent.disableScrollPropagation(panel);
+    const radioName = cfg.el + '-tema';
+    if (cfg.themes.length > 1) {
+      pb.append(mk('div', 'mp-g', 'Tema peta'));
+      cfg.themes.forEach((k) => {
+        const lab = mk('label'); const r = mk('input'); r.type = 'radio'; r.name = radioName; r.value = k; r.checked = k === S.theme;
+        r.addEventListener('change', () => setTheme(k)); lab.append(r, document.createTextNode(THEMES[k].label));
+        if (THEMES[k].star) lab.append(mk('span', 'star', ' ★'));
+        pb.append(lab);
+      });
+    }
+    const opRow = mk('div', 'mp-op'); opRow.append(mk('span', null, 'Transparansi tema'));
+    const rng = mk('input'); rng.type = 'range'; rng.min = '20'; rng.max = '100'; rng.value = String(Math.round(S.op * 100));
+    rng.addEventListener('input', () => { S.op = Number(rng.value) / 100; restyleTheme(); }); opRow.append(rng); if (cfg.themes.some((k) => THEMES[k].ds)) pb.append(opRow);
+    pb.append(mk('div', 'mp-g', 'Layer'));
+    cfg.overlays.forEach((k) => {
+      const lab = mk('label'); const c = mk('input'); c.type = 'checkbox'; c.checked = S.on.has(k);
+      c.addEventListener('change', () => { if (c.checked) S.on.add(k); else S.on.delete(k); syncOverlay(k); order(); renderLegend(); });
+      lab.append(c, document.createTextNode(OVERLAYS[k].label)); pb.append(lab);
+    });
+    pb.append(mk('div', 'mp-g', 'Peta dasar'));
+    const bm = mk('div', 'mp-bm');
+    const bmBtn = {};
+    ['light', 'dark', 'osm', 'sat'].forEach((k) => {
+      const b = mk('button', k === S.base ? 'on' : '', BASE[k].label); bmBtn[k] = b;
+      b.addEventListener('click', () => setBase(k)); bm.append(b);
+    });
+    pb.append(bm);
+    const bmNote = mk('div', 'mp-note'); bmNote.hidden = true;
+    bmNote.textContent = 'Peta dasar daring (OpenStreetMap / citra) diblokir di lingkungan ini, jadi peta kembali ke peta dasar vektor.';
+    pb.append(bmNote);
+    const fitB = mk('button', '', 'Kembali ke tampilan awal'); fitB.style.cssText = 'margin-top:8px;width:100%;appearance:none;font:inherit;font-size:12px;font-weight:600;border:1px solid var(--line);background:#fff;color:var(--b7);padding:6px;border-radius:8px;cursor:pointer';
+    fitB.addEventListener('click', () => fitHome()); pb.append(fitB);
+
+    function fitHome() {
+      const L0 = S.layers[cfg.homeLayer]; if (L0 && L0.getBounds && L0.getBounds().isValid()) map.flyToBounds(L0.getBounds(), { padding: [20, 20], duration: REDUCE ? 0 : 0.9 });
+    }
+    function setBase(k) {
+      if (TILE_BASE(k) && S.tilesBlocked) k = 'light';
+      S.base = k; Object.keys(bmBtn).forEach((n) => bmBtn[n].classList.toggle('on', n === k));
+      applyBase(); renderLegend();
+    }
+    function tileLayerFor(k) {
+      if (S.tiles[k]) return S.tiles[k];
+      const d = BASE[k];
+      const t = L.tileLayer(d.tile, { maxZoom: d.maxZoom || 19, maxNativeZoom: d.maxZoom || 19, attribution: d.attr, crossOrigin: false, keepBuffer: 1 });
+      let ok = 0, err = 0;
+      t.on('tileload', () => { ok += 1; });
+      t.on('tileerror', () => {
+        err += 1;
+        if (ok === 0 && err >= 6 && !S.tilesBlocked) {
+          S.tilesBlocked = true; bmNote.hidden = false;
+          bmBtn.osm.disabled = true; bmBtn.sat.disabled = true;
+          bmBtn.osm.title = bmBtn.sat.title = 'Tidak tersedia: lingkungan ini memblokir pemuatan ubin peta daring';
+          if (TILE_BASE(S.base)) setBase('light');
+        }
+      });
+      S.tiles[k] = t; return t;
+    }
+    function applyBase() {
+      const b = BASE[S.base]; const tiled = TILE_BASE(S.base);
+      el.classList.toggle('dark', S.base === 'dark'); el.classList.toggle('sat', S.base === 'sat');
+      el.style.background = b.sea;
+      Object.keys(S.tiles).forEach((k) => { if (k !== S.base && map.hasLayer(S.tiles[k])) map.removeLayer(S.tiles[k]); });
+      if (tiled) { const t = tileLayerFor(S.base); if (!map.hasLayer(t)) t.addTo(map); }
+      if (S.layers.land) {
+        if (tiled) { if (map.hasLayer(S.layers.land)) map.removeLayer(S.layers.land); }
+        else { if (!map.hasLayer(S.layers.land)) map.addLayer(S.layers.land); S.layers.land.setStyle({ fillColor: b.land, color: b.coast }); S.orderSig = ''; }
+      }
+      if (S.layers.kelurahan) S.layers.kelurahan.setStyle({ color: b.kel });
+      if (S.layers.admin) S.layers.admin.setStyle({ color: b.adm });
+    }
+    function bindCommon(layer, def) {
+      layer.on('mouseover', (e) => { const t = e.layer; if (t.setStyle) { t.setStyle({ weight: 2.4, color: '#0A2E52', opacity: 1 }); } });
+      layer.on('mouseout', (e) => { const t = e.layer; if (t.setStyle && layer.resetStyle) layer.resetStyle(t); });
+      layer.eachLayer((l) => {
+        const p = l.feature.properties;
+        l.bindTooltip(() => def.tip(p), { sticky: true, className: 'jtt', direction: 'top', offset: [0, -8], opacity: 1 });
+        l.bindPopup(() => def.pop(p), { maxWidth: 320 });
+      });
+    }
+    function buildTheme(k) {
+      const def = THEMES[k]; if (!def.ds) return null;
+      const f = featuresOf(def.ds); if (!f) return null;
+      const lyr = L.geoJSON(f, { renderer: R, style: def.style(S) });
+      bindCommon(lyr, def); return lyr;
+    }
+    function restyleTheme() { const l = S.layers['tema:' + S.theme]; if (l) l.setStyle(THEMES[S.theme].style(S)); }
+    function setTheme(k) {
+      const old = S.layers['tema:' + S.theme]; if (old && map.hasLayer(old)) map.removeLayer(old);
+      S.theme = k; ensure(); renderLegend();
+    }
+    function buildOverlay(k) {
+      const def = OVERLAYS[k];
+      if (k === 'gcp') {
+        const rows = rowsOf('drone_titik_kml'); if (!rows) return null;
+        const meas = new Set((rowsOf('drone_icp') || []).map((r) => String(r.titik).replace(/\s|0(?=\d)/g, '').toUpperCase()));
+        const g = L.featureGroup(); const lab = L.layerGroup();
+        rows.forEach((r) => {
+          const ll = [Number(r.lat), Number(r.lon)];
+          const isG = r.jenis === 'GCP';
+          if (!isG && meas.has(String(r.nama).replace(/\s|0(?=\d)/g, '').toUpperCase())) return;
+          const m = isG
+            ? L.marker(ll, { pane: 'pts', icon: L.divIcon({ className: '', iconSize: [22, 22], iconAnchor: [11, 18], html: GCP_SVG }) })
+            : L.circleMarker(ll, { renderer: R, radius: 7, color: '#6B7A8C', weight: 2, dashArray: '3 2', fillColor: '#FFFFFF', fillOpacity: 0.9 });
+          const kick = isG ? 'Titik kontrol tanah (GCP) · data KML' : 'Titik uji (ICP) · tanpa data uji di file akurasi';
+          m.bindTooltip(() => ttEl(r.nama, isG ? 'Titik kontrol (GCP)' : 'ICP tanpa data uji'), { direction: 'top', offset: [0, isG ? -16 : -8], className: 'jtt', opacity: 1 });
+          m.bindPopup(() => popupEl(r.nama, kick, [['Jenis', isG ? 'Ground Control Point' : 'Independent Check Point'], ['Lintang', fmt(r.lat, 6) + '°'], ['Bujur', fmt(r.lon, 6) + '°'],
+            ['Catatan', isG ? 'Dipakai sebagai kontrol saat pengolahan foto udara' : 'Belum ada pengukuran pembanding pada file akurasi']], isG ? GCP_C : '#9AA7B5'));
+          g.addLayer(m);
+          lab.addLayer(L.tooltip({ permanent: true, direction: 'right', offset: [isG ? 12 : 10, 0], className: 'jlbl pin', interactive: false }).setLatLng(ll).setContent(mk('span', null, r.nama)));
+        });
+        S.labels[k] = lab; return g;
+      }
+      if (k === 'icp') {
+        const rows = rowsOf('drone_icp'); if (!rows) return null;
+        const g = L.featureGroup(); const lab = L.layerGroup();
+        rows.forEach((r) => {
+          const c = icpColor(r.dxy); const ll = [Number(r.lat), Number(r.lon)];
+          const m = L.circleMarker(ll, { renderer: R, radius: 8, color: '#FFFFFF', weight: 2.5, fillColor: c, fillOpacity: 1 });
+          m.bindTooltip(() => ttEl(r.titik, 'Residual horizontal ' + fmt(r.dxy, 3) + ' m'), { direction: 'top', offset: [0, -8], className: 'jtt', opacity: 1 });
+          m.bindPopup(() => popupEl(r.titik, 'Titik uji akurasi (ICP)', [['ΔX ortofoto', fmt(r.dx, 3) + ' m'], ['ΔY ortofoto', fmt(r.dy, 3) + ' m'], ['Residual horizontal', fmt(r.dxy, 3) + ' m'],
+            ['Z ICP', fmt(r.z_icp, 3) + ' m'], ['Z DSM', fmt(r.z_dsm, 3) + ' m'], ['ΔZ DSM', fmt(r.dz, 3) + ' m'], ['X; Y (UTM 48N)', fmt(r.x_icp, 2) + '; ' + fmt(r.y_icp, 2)]], c));
+          m.on('mouseover', () => m.setStyle({ radius: 11 })); m.on('mouseout', () => m.setStyle({ radius: 8 }));
+          g.addLayer(m);
+          lab.addLayer(L.tooltip({ permanent: true, direction: 'right', offset: [10, 0], className: 'jlbl pin', interactive: false }).setLatLng(ll).setContent(mk('span', null, r.titik)));
+        });
+        S.labels[k] = lab; return g;
+      }
+      const f = featuresOf(def.ds); if (!f) return null;
+      const b = BASE[S.base];
+      if (k === 'deliniasi') {
+        const lyr = L.geoJSON(f, { renderer: R, style: (ft) => ({ fill: false, color: ft.properties.ZONA && ft.properties.ZONA.startsWith('DISTRICT') ? '#D35400' : '#E58E5A', weight: ft.properties.ZONA && ft.properties.ZONA.startsWith('DISTRICT') ? 2.6 : 1.6, dashArray: '10 6', opacity: 0.95 }), interactive: false });
+        const lab = L.layerGroup();
+        f.forEach((ft) => { if (!String(ft.properties.ZONA || '').startsWith('DISTRICT')) return; const c = L.geoJSON(ft).getBounds().getCenter();
+          lab.addLayer(L.tooltip({ permanent: true, direction: 'center', className: 'jlbl dst', interactive: false }).setLatLng(c).setContent(mk('span', null, distrikLabel(ft.properties.ZONA)))); });
+        S.labels[k] = lab; return lyr;
+      }
+      if (k === 'admin' || k === 'kelurahan') {
+        const isA = k === 'admin';
+        const lyr = L.geoJSON(f, { renderer: R, style: { fill: false, color: isA ? b.adm : b.kel, weight: isA ? 1.6 : 0.8, dashArray: isA ? '8 4 2 4' : '4 4', opacity: 0.9 }, interactive: isA });
+        if (isA) lyr.eachLayer((l) => { const p = l.feature.properties; l.bindPopup(() => popupEl('Kel. ' + p.kelurahan, 'Batas administrasi', [['Kecamatan', p.kecamatan], ['Kota', p.kota], ['Luas di dalam WPP', fmt(p.luas_ha, 2) + ' ha']])); });
+        const lab = L.layerGroup();
+        f.forEach((ft) => { const c = L.geoJSON(ft).getBounds().getCenter(); lab.addLayer(L.tooltip({ permanent: true, direction: 'center', className: 'jlbl' + (isA ? '' : ' ctx'), interactive: false }).setLatLng(c).setContent(mk('span', null, isA ? 'Kel. ' + ft.properties.kelurahan : titleCase(ft.properties.kelurahan)))); });
+        S.labels[k] = lab; return lyr;
+      }
+      if (k === 'jalan') {
+        const order = (fn) => ['JLING.S', 'JLS', 'JKS', 'JKP', 'JAS', 'JAP'].indexOf(fn);
+        const ff = f.slice().sort((a, c) => order(a.properties.fungsi) - order(c.properties.fungsi));
+        const lyr = L.geoJSON(ff, { renderer: R, style: (ft) => { const r = ROAD[ft.properties.fungsi] || ['', '#999', 1]; return { color: r[1], weight: r[2], opacity: 0.95, lineCap: 'round', lineJoin: 'round' }; } });
+        lyr.on('mouseover', (e) => e.layer.setStyle({ weight: (ROAD[e.layer.feature.properties.fungsi] || [0, 0, 1])[2] + 2.5, color: '#0A2E52' }));
+        lyr.on('mouseout', (e) => lyr.resetStyle(e.layer));
+        lyr.eachLayer((l) => { const p = l.feature.properties; const r = ROAD[p.fungsi] || [p.fungsi];
+          l.bindTooltip(() => ttEl(p.nama_ruas || 'Ruas jalan', r[0]), { sticky: true, className: 'jtt', opacity: 1 });
+          l.bindPopup(() => popupEl(p.nama_ruas || 'Ruas jalan', 'Jalan ' + r[0], [['Fungsi', r[0] + ' (' + p.fungsi + ')'], ['Status', p.status], ['Lebar', p.lebar_m ? fmt(p.lebar_m, 1) + ' m' : '—'], ['Panjang segmen', fmt(p.panjang_km, 3) + ' km']], r[1])); });
+        return lyr;
+      }
+      if (k === 'kabel') {
+        const lyr = L.geoJSON(f, { renderer: R, style: { color: '#7B1FA2', weight: 2.2, dashArray: '7 5', opacity: 0.9 } });
+        lyr.eachLayer((l) => { const p = l.feature.properties; l.bindTooltip(() => ttEl('Kabel/pipa bawah laut', p.operator), { sticky: true, className: 'jtt', opacity: 1 }); });
+        return lyr;
+      }
+      if (k === 'pelabuhan') {
+        const lyr = L.geoJSON(f, { pointToLayer: (ft, ll) => L.marker(ll, { pane: 'pts', icon: L.divIcon({ className: '', iconSize: [24, 24], iconAnchor: [12, 12], html: '<div class="port-ic" style="background:' + portColor(ft.properties.jenis) + '">' + ANCHOR + '</div>' }) }) });
+        lyr.eachLayer((l) => { const p = l.feature.properties; l.bindTooltip(() => ttEl(p.nama, p.jenis), { direction: 'top', offset: [0, -12], className: 'jtt', opacity: 1 });
+          l.bindPopup(() => popupEl(p.nama, 'Pelabuhan', [['Jenis', p.jenis]], portColor(p.jenis))); });
+        return lyr;
+      }
+      return null;
+    }
+    function order() {
+      const seq = ['land', 'tema:' + S.theme, 'kelurahan', 'admin', 'deliniasi', 'kabel', 'jalan', 'gcp', 'icp'];
+      const live = seq.filter((k) => S.layers[k] && map.hasLayer(S.layers[k]));
+      const sig = live.join('|'); if (sig === S.orderSig) return; S.orderSig = sig;
+      live.forEach((k) => { if (S.layers[k].bringToFront) S.layers[k].bringToFront(); });
+    }
+    function syncOverlay(k) {
+      const l = S.layers[k]; if (!l) return; const want = S.on.has(k);
+      if (want && !map.hasLayer(l)) map.addLayer(l); if (!want && map.hasLayer(l)) map.removeLayer(l);
+      const lab = S.labels[k]; if (lab) { if (want && !map.hasLayer(lab)) map.addLayer(lab); if (!want && map.hasLayer(lab)) map.removeLayer(lab); }
+    }
+    function ensure() {
+      if (!S.layers.land) { const f = featuresOf('geo_daratan'); if (f) { const b = BASE[S.base]; S.layers.land = L.geoJSON(f, { renderer: R, interactive: false, style: { fillColor: b.land, fillOpacity: 1, color: b.coast, weight: 0.9 } }).addTo(map); } }
+      const tk = 'tema:' + S.theme;
+      if (THEMES[S.theme].ds && !S.layers[tk]) { const l = buildTheme(S.theme); if (l) { S.layers[tk] = l; if (cfg.homeLayer === 'theme') S.layers.theme = l; } }
+      Object.keys(THEMES).forEach((k) => { const l = S.layers['tema:' + k]; if (!l) return; if (k === S.theme && !map.hasLayer(l)) { l.setStyle(THEMES[k].style(S)); map.addLayer(l); } if (k !== S.theme && map.hasLayer(l)) map.removeLayer(l); });
+      cfg.overlays.forEach((k) => { if (!S.layers[k]) { const l = buildOverlay(k); if (l) S.layers[k] = l; } syncOverlay(k); });
+      if (!S.homed && S.layers[cfg.homeLayer]) { S.homed = true; map.fitBounds(S.layers[cfg.homeLayer].getBounds(), { padding: [16, 16] }); }
+      const need = ['geo_daratan', THEMES[S.theme].ds].concat(cfg.overlays.filter((k) => S.on.has(k)).map((k) => OVERLAYS[k].ds)).filter(Boolean);
+      const bad = need.filter((id) => ['error', 'missing', 'declined'].includes(st(id)));
+      const loading = need.filter((id) => st(id) !== 'ok' && !bad.includes(id));
+      if (bad.length) { status.hidden = false; status.textContent = 'Sebagian layer belum bisa dimuat (' + bad.length + ')'; }
+      else if (loading.length) { status.hidden = false; status.textContent = 'Memuat data spasial… (' + (need.length - loading.length) + '/' + need.length + ')'; }
+      else status.hidden = true;
+      applyBase(); order(); renderLegend();
+    }
+    function legendRow(sw, text, extra) { const r = mk('div', 'lgr'); r.append(sw, mk('span', null, text)); if (extra) r.append(mk('small', null, extra)); return r; }
+    const swatch = (c, cls) => { const s = mk('span', cls || 'sw'); if ((cls || 'sw') === 'sw') { s.style.background = c; } else if (cls === 'ln') { s.style.borderTopColor = c; } else s.style.background = c; return s; };
+    function renderLegend() {
+      legend.replaceChildren();
+      const head = mk('div', 'lgt'); head.append(mk('span', null, 'Legenda')); legend.append(head);
+      const body = mk('div', 'lgb'); legend.append(body);
+      head.style.cursor = 'pointer'; head.addEventListener('click', () => legend.classList.toggle('col'));
+      const th = S.theme;
+      if (th === 'blokzona') {
+        body.append(mk('div', 'lgt', 'Rencana Blok Zona (klik untuk saring)'));
+        const sums = rowsOf('blok_luas_zona'); const by = sums ? Object.fromEntries(sums.map((r) => [r.zona, r])) : {};
+        ZONA.forEach(([z, c]) => { if (sums && !by[z]) return; const r = legendRow(swatch(c), z.replace('Zona ', ''), by[z] ? fmt(by[z].luas_ha, 1) + ' ha' : '');
+          r.classList.add('btn'); if (S.hidden.has(z)) r.classList.add('off');
+          r.addEventListener('click', () => api.toggleZona(z)); r.addEventListener('mouseenter', () => api.highlight(z)); r.addEventListener('mouseleave', () => api.highlight(null)); body.append(r); });
+      } else if (th === 'sk_hutan') { body.append(mk('div', 'lgt', 'Fungsi Kawasan Hutan')); HUTAN.forEach((h) => body.append(legendRow(swatch(h[2]), h[1] + ' (' + h[0] + ')'))); }
+      else if (th === 'mangrove') { body.append(mk('div', 'lgt', 'Kerapatan Mangrove')); MANGROVE.forEach((m) => body.append(legendRow(swatch(m[1]), m[0]))); }
+      else if (th === 'znt') { body.append(mk('div', 'lgt', 'Zona Nilai Tanah (per m²)')); ZNT.forEach((z) => body.append(legendRow(swatch(z[2]), 'Kelas ' + z[0] + ' · ' + z[1]))); }
+      else if (th === 'karhutla') { body.append(mk('div', 'lgt', 'Kerawanan Karhutla')); KARHUTLA.forEach((k) => body.append(legendRow(swatch(k[1]), k[0]))); }
+      else if (th === 'kumuh') { body.append(mk('div', 'lgt', 'Permukiman Kumuh')); body.append(legendRow(swatch('rgba(198,40,40,.5)'), 'Kawasan kumuh (SK penetapan)')); }
+      const ov = cfg.overlays.filter((k) => S.on.has(k));
+      if (ov.length) body.append(mk('div', 'lgt', 'Layer'));
+      ov.forEach((k) => {
+        if (k === 'deliniasi') { const s = mk('span', 'ln'); s.style.borderTop = '3px dashed #D35400'; body.append(legendRow(s, 'Batas delineasi WPP / distrik')); }
+        if (k === 'admin') { const s = mk('span', 'ln'); s.style.borderTop = '2px dashed ' + BASE[S.base].adm; body.append(legendRow(s, 'Batas kelurahan dalam WPP')); }
+        if (k === 'kelurahan') { const s = mk('span', 'ln'); s.style.borderTop = '1px dashed ' + BASE[S.base].kel; body.append(legendRow(s, 'Batas kelurahan sekitar')); }
+        if (k === 'jalan') Object.keys(ROAD).forEach((r) => { const s = mk('span', 'ln'); s.style.borderTop = Math.max(1.5, ROAD[r][2]) + 'px solid ' + ROAD[r][1]; body.append(legendRow(s, 'Jalan ' + ROAD[r][0])); });
+        if (k === 'kabel') { const s = mk('span', 'ln'); s.style.borderTop = '2px dashed #7B1FA2'; body.append(legendRow(s, 'Kabel/pipa bawah laut')); }
+        if (k === 'pelabuhan') PORT.forEach((p) => body.append(legendRow(swatch(p[1], 'pt'), 'Pelabuhan ' + p[0])));
+        if (k === 'icp') { body.append(mk('div', 'lgt', 'Titik uji ICP · residual horizontal')); ICP_CLS.forEach((c) => body.append(legendRow(swatch(c[1], 'pt'), c[2]))); }
+        if (k === 'gcp') {
+          body.append(mk('div', 'lgt', 'Titik kontrol & titik tanpa uji'));
+          const tri = mk('span'); tri.style.cssText = 'width:14px;height:12px;flex:none;clip-path:polygon(50% 0,100% 100%,0 100%);background:' + GCP_C;
+          body.append(legendRow(tri, 'GCP (titik kontrol tanah)'));
+          const ho = mk('span', 'pt'); ho.style.cssText = 'background:#fff;border:2px dashed #6B7A8C;box-shadow:none';
+          body.append(legendRow(ho, 'ICP tanpa data uji'));
+        }
+      });
+      body.append(mk('div', 'lgt', 'Peta dasar'));
+      if (TILE_BASE(S.base)) {
+        const s = mk('span', 'sw'); s.style.background = S.base === 'sat' ? 'linear-gradient(135deg,#2F4A2A,#4E6B3A)' : 'linear-gradient(135deg,#EADFCE,#B9D6C8)';
+        body.append(legendRow(s, BASE[S.base].label));
+      } else {
+        const s0 = mk('span', 'sw'); s0.style.background = BASE[S.base].land; s0.style.borderColor = BASE[S.base].coast;
+        const s1 = mk('span', 'sw'); s1.style.background = BASE[S.base].sea;
+        body.append(legendRow(s0, 'Daratan'), legendRow(s1, 'Perairan / laut'));
+      }
+    }
+    const api = {
+      map, S, ensure,
+      highlight(z) { if (S.theme !== 'blokzona') return; S.hl = z; restyleTheme(); },
+      toggleZona(z) { if (S.hidden.has(z)) S.hidden.delete(z); else S.hidden.add(z); restyleTheme(); renderLegend(); if (cfg.onFilter) cfg.onFilter(S.hidden); },
+      resize() { map.invalidateSize(); },
+    };
+    renderLegend();
+    return api;
+  }
+
+  const MAPS = {};
+  function ensureMaps() {
+    if (typeof L === 'undefined') { $$('.mp-status').forEach((s) => { s.hidden = false; s.textContent = 'Pustaka peta belum termuat — muat ulang halaman.'; }); return; }
+    const mm = document.getElementById('map-main');
+    if (!MAPS.main && mm.clientWidth > 0) {
+      MAPS.main = createMapCtl({ el: 'map-main', status: 'st-main', theme: 'blokzona', themes: ['blokzona', 'sk_hutan', 'mangrove', 'znt', 'karhutla', 'kumuh', 'none'],
+        overlays: ['deliniasi', 'admin', 'kelurahan', 'jalan', 'kabel', 'pelabuhan'], overlaysOn: ['deliniasi', 'admin', 'jalan', 'pelabuhan'], homeLayer: 'deliniasi',
+        onFilter: () => drawZoneBars('zb-ringkas', () => MAPS.main, 5) });
+    }
+    const mb = document.getElementById('map-blok');
+    if (!MAPS.blok && mb.clientWidth > 0) {
+      MAPS.blok = createMapCtl({ el: 'map-blok', status: 'st-blok', theme: 'blokzona', themes: ['blokzona'], overlays: ['deliniasi', 'admin', 'jalan'], overlaysOn: ['admin'],
+        homeLayer: 'theme', collapsed: true, panelTitle: 'Layer', onFilter: () => drawZoneBars('zb-full', () => MAPS.blok, 0) });
+    }
+    const md = document.getElementById('map-drone');
+    if (!MAPS.drone && md.clientWidth > 0) {
+      MAPS.drone = createMapCtl({ el: 'map-drone', status: 'st-drone', theme: 'none', themes: ['none'], overlays: ['deliniasi', 'admin', 'gcp', 'icp'], overlaysOn: ['deliniasi', 'gcp', 'icp'],
+        homeLayer: 'deliniasi', panelTitle: 'Layer', base: 'sat' });
+    }
+    Object.values(MAPS).forEach((m) => { m.resize(); m.ensure(); });
+  }
+
+  /* ======================= tooltip for charts ======================= */
+  function chartTip(box) {
+    let t = box.querySelector(':scope > .tip'); if (!t) { t = mk('div', 'tip'); box.append(t); }
+    return {
+      show(title, lines, ev) {
+        t.replaceChildren(mk('b', null, title)); (lines || []).forEach((l) => { t.append(mk('br')); t.append(document.createTextNode(l)); });
+        const r = box.getBoundingClientRect(); t.classList.add('on');
+        let x = ev.clientX - r.left + 14, y = ev.clientY - r.top + 12;
+        const w = t.offsetWidth, h = t.offsetHeight; if (x + w > r.width) x = Math.max(0, ev.clientX - r.left - w - 12); if (y + h > r.height + 40) y = Math.max(0, ev.clientY - r.top - h - 10);
+        t.style.left = x + 'px'; t.style.top = y + 'px';
+      },
+      hide() { t.classList.remove('on'); },
+    };
+  }
+
+  /* ======================= charts ======================= */
+  const SIG = {};
+  function needDraw(key, box, deps, force) {
+    const w = box.clientWidth; if (!w) return false;
+    const sig = w + '|' + deps.map((d) => st(d) + ':' + ((rowsOf(d) || []).length)).join(',');
+    if (!force && SIG[key] === sig) return false; SIG[key] = sig; return true;
+  }
+  function placeholder(box, deps) {
+    const bad = deps.some((d) => ['error', 'missing', 'declined', 'connect'].includes(st(d)));
+    box.querySelector('svg') && box.querySelector('svg').remove();
+    let p = box.querySelector('.ph'); if (!p) { p = mk('div', 'ph'); p.style.cssText = 'color:var(--muted);font-size:12px;padding:30px 0;text-align:center'; box.append(p); }
+    p.textContent = bad ? 'Data belum dapat dimuat' : '—';
+  }
+  const trunc = (s, n) => { s = String(s == null ? '' : s); return s.length > n ? s.slice(0, n - 1) + '…' : s; };
+
+  function hbar(box, items, o) {
+    const ph = box.querySelector('.ph'); if (ph) ph.remove();
+    const W = box.clientWidth; const rowH = o.rowH || 30; const labW = Math.min(o.labW || 170, W * 0.42); const valW = o.valW || 76;
+    const H = items.length * rowH + 6 + (o.ref ? 20 : 0);
+    const old = box.querySelector('svg'); if (old) old.remove();
+    const tip = chartTip(box);
+    const svg = d3.select(box).append('svg').attr('viewBox', '0 0 ' + W + ' ' + H).attr('width', '100%').attr('height', H);
+    const maxV = o.max || d3.max(items, (d) => d.value) || 1;
+    const x = d3.scaleLinear().domain([0, maxV]).range([0, Math.max(10, W - labW - valW)]);
+    const g = svg.selectAll('g.r').data(items).join('g').attr('class', 'r').attr('transform', (d, i) => 'translate(0,' + (i * rowH + 3 + (o.ref ? 16 : 0)) + ')').style('cursor', 'default');
+    g.append('text').attr('x', labW - 8).attr('y', rowH / 2).attr('dy', '.35em').attr('text-anchor', 'end').attr('font-size', 12).attr('fill', '#2B3B50').text((d) => trunc(d.label, Math.floor(labW / 6.6)));
+    g.append('rect').attr('x', labW).attr('y', 6).attr('height', rowH - 12).attr('rx', 5).attr('fill', '#EEF3F9').attr('width', Math.max(10, W - labW - valW));
+    const bars = g.append('rect').attr('class', 'b').attr('x', labW).attr('y', 6).attr('height', rowH - 12).attr('rx', 5).attr('fill', (d) => d.color).attr('width', 0);
+    bars.transition().duration(REDUCE ? 0 : 950).delay((d, i) => (REDUCE ? 0 : i * 70)).ease(d3.easeCubicOut).attr('width', (d) => Math.max(2, x(d.value)));
+    const vt = g.append('text').attr('x', (d) => labW + x(d.value) + 7).attr('y', rowH / 2).attr('dy', '.35em').attr('font-size', 12).attr('font-weight', 600).attr('fill', '#0A2E52').style('opacity', 0).text((d) => o.fmtV(d.value));
+    vt.transition().duration(REDUCE ? 0 : 500).delay((d, i) => (REDUCE ? 0 : 500 + i * 70)).style('opacity', 1);
+    if (o.ref != null) {
+      const rx = labW + x(o.ref);
+      svg.append('line').attr('x1', rx).attr('x2', rx).attr('y1', 12).attr('y2', H).attr('stroke', '#C62828').attr('stroke-dasharray', '4 3').attr('stroke-width', 1.5);
+      svg.append('text').attr('x', rx).attr('y', 10).attr('text-anchor', 'middle').attr('font-size', 11).attr('fill', '#C62828').text(o.refLabel || '');
+    }
+    g.on('mousemove', (ev, d) => { bars.attr('opacity', (b) => (b === d ? 1 : 0.45)); tip.show(d.label, d.lines || [o.fmtV(d.value)], ev); })
+      .on('mouseleave', () => { bars.attr('opacity', 1); tip.hide(); });
+  }
+  function vbar(box, items, o) {
+    const ph = box.querySelector('.ph'); if (ph) ph.remove();
+    const W = box.clientWidth, H = o.h || 220, m = { t: 22, r: 6, b: 38, l: 6 };
+    const old = box.querySelector('svg'); if (old) old.remove();
+    const tip = chartTip(box);
+    const svg = d3.select(box).append('svg').attr('viewBox', '0 0 ' + W + ' ' + H).attr('width', '100%').attr('height', H);
+    const x = d3.scaleBand().domain(items.map((d) => d.label)).range([m.l, W - m.r]).padding(0.28);
+    const y = d3.scaleLinear().domain([0, d3.max(items, (d) => d.value) * 1.12]).range([H - m.b, m.t]);
+    svg.append('line').attr('x1', m.l).attr('x2', W - m.r).attr('y1', H - m.b).attr('y2', H - m.b).attr('stroke', '#C9D6E4');
+    const b = svg.selectAll('rect.b').data(items).join('rect').attr('class', 'b').attr('x', (d) => x(d.label)).attr('width', x.bandwidth()).attr('rx', 6)
+      .attr('fill', (d) => d.color).attr('y', H - m.b).attr('height', 0);
+    b.transition().duration(REDUCE ? 0 : 900).delay((d, i) => (REDUCE ? 0 : i * 80)).ease(d3.easeCubicOut).attr('y', (d) => y(d.value)).attr('height', (d) => H - m.b - y(d.value));
+    svg.selectAll('text.v').data(items).join('text').attr('class', 'v').attr('x', (d) => x(d.label) + x.bandwidth() / 2).attr('y', (d) => y(d.value) - 6).attr('text-anchor', 'middle')
+      .attr('font-size', 12).attr('font-weight', 600).attr('fill', '#0A2E52').style('opacity', 0).text((d) => o.fmtV(d.value))
+      .transition().duration(REDUCE ? 0 : 400).delay((d, i) => (REDUCE ? 0 : 600 + i * 80)).style('opacity', 1);
+    svg.selectAll('text.l').data(items).join('text').attr('class', 'l').attr('x', (d) => x(d.label) + x.bandwidth() / 2).attr('y', H - m.b + 15).attr('text-anchor', 'middle')
+      .attr('font-size', 11).attr('fill', '#4A5A6E').text((d) => trunc(d.label, Math.max(6, Math.floor(x.bandwidth() / 5.6))));
+    b.on('mousemove', (ev, d) => { b.attr('opacity', (q) => (q === d ? 1 : 0.5)); tip.show(d.label, [o.fmtV(d.value)], ev); }).on('mouseleave', () => { b.attr('opacity', 1); tip.hide(); });
+  }
+  function donut(box, items, o) {
+    const ph = box.querySelector('.ph'); if (ph) ph.remove();
+    const W = box.clientWidth, H = Math.min(240, Math.max(190, W * 0.62)); const R = Math.min(W, H) / 2 - 6;
+    const old = box.querySelector('svg'); if (old) old.remove(); const oldLg = box.querySelector('.lg'); if (oldLg) oldLg.remove();
+    const tip = chartTip(box);
+    const svg = d3.select(box).insert('svg', ':first-child').attr('viewBox', '0 0 ' + W + ' ' + H).attr('width', '100%').attr('height', H);
+    const g = svg.append('g').attr('transform', 'translate(' + W / 2 + ',' + H / 2 + ')');
+    const pie = d3.pie().sort(null).value((d) => d.value).padAngle(0.02);
+    const arc = d3.arc().innerRadius(R * 0.6).outerRadius(R).cornerRadius(5); const arcH = d3.arc().innerRadius(R * 0.6).outerRadius(R + 6).cornerRadius(5);
+    const total = d3.sum(items, (d) => d.value);
+    const cv = g.append('text').attr('text-anchor', 'middle').attr('dy', '-.1em').attr('font-size', 22).attr('fill', '#0A2E52').style('font-family', 'var(--font-anthropic-serif)').text(fmt(total, 1) + '%');
+    const cl = g.append('text').attr('text-anchor', 'middle').attr('dy', '1.4em').attr('font-size', 11).attr('fill', '#5B6B80').text(o.centerLabel || 'Total');
+    const p = g.selectAll('path').data(pie(items)).join('path').attr('fill', (d) => d.data.color).attr('stroke', '#fff').attr('stroke-width', 2);
+    p.transition().duration(REDUCE ? 0 : 1000).ease(d3.easeCubicOut).attrTween('d', (d) => { const i = d3.interpolate({ startAngle: 0, endAngle: 0 }, d); return (t) => arc(i(t)); });
+    p.on('mousemove', function (ev, d) { d3.select(this).attr('d', arcH(d)); cv.text(fmt(d.data.value, 1) + '%'); cl.text(trunc(d.data.label, 22)); tip.show(d.data.label, [fmt(d.data.value, 1) + '% luas kawasan'], ev); })
+      .on('mouseleave', function (ev, d) { d3.select(this).attr('d', arc(d)); cv.text(fmt(total, 1) + '%'); cl.text(o.centerLabel || 'Total'); tip.hide(); });
+    const lg = mk('div', 'lg'); items.forEach((d) => { const s = mk('span'); const sw = mk('span', 'sw'); sw.style.background = d.color; s.append(sw, document.createTextNode(d.label + ' · ' + fmt(d.value, 1) + '%')); lg.append(s); }); box.append(lg);
+  }
+
+  const LANDUSE_C = { 'Semak Belukar': '#B5CF6B', 'Permukiman & Tempat Kegiatan': '#E8836B', 'Perkebunan/Kebun': '#4E9A5B' };
+  const MORFO_C = ['#9CCB86', '#E9D98B', '#C99A5B'];
+  const LERENG_C = { 'Datar': '#FFF3B0', 'Landai': '#F9D27A', 'Agak Curam': '#F0A04B', 'Curam': '#D9622B', 'Sangat Curam': '#A3341B' };
+  const DISTRIK_C = d3.scaleOrdinal(['#0A2E52', '#12477D', '#1E73BE', '#3B8FD9', '#5FA8E6', '#C9972A', '#E2B95B', '#0E7C86', '#5B6B80']);
+
+  function drawCharts(force) {
+    let box = $('#ch-landuse');
+    if (needDraw('landuse', box, ['landuse'], force)) { const r = rowsOf('landuse'); if (!r) placeholder(box, ['landuse']); else donut(box, r.map((d) => ({ label: d.kategori, value: Number(d.persen), color: LANDUSE_C[d.kategori] || '#9AA' })), { centerLabel: 'tercakup' }); }
+    box = $('#ch-morfo');
+    if (needDraw('morfo', box, ['topografi'], force)) { const r = rowsOf('topografi'); if (!r) placeholder(box, ['topografi']); else hbar(box, r.filter((d) => d.jenis === 'Morfografi').map((d, i) => ({ label: d.kelas, value: Number(d.persen), color: MORFO_C[i % 3] })), { fmtV: (v) => fmt(v, 1) + '%', labW: 190, rowH: 40 }); }
+    box = $('#ch-lereng');
+    if (needDraw('lereng', box, ['topografi'], force)) { const r = rowsOf('topografi'); if (!r) placeholder(box, ['topografi']); else vbar(box, r.filter((d) => d.jenis === 'Kemiringan Lereng').map((d) => ({ label: d.kelas, value: Number(d.persen), color: LERENG_C[d.kelas] || '#ccc' })), { fmtV: (v) => fmt(v, 1) + '%' }); }
+    box = $('#ch-jalan');
+    if (needDraw('jalan', box, ['jalan_per_fungsi'], force)) { const r = rowsOf('jalan_per_fungsi'); if (!r) placeholder(box, ['geo_jalan']); else hbar(box, r.map((d) => ({ label: (ROAD[d.fungsi] || [d.fungsi])[0], value: Number(d.panjang_km), color: (ROAD[d.fungsi] || [0, '#999'])[1], lines: [fmt(d.panjang_km, 2) + ' km', fmt(d.jumlah_ruas, 0) + ' ruas'] })), { fmtV: (v) => fmt(v, 1) + ' km', labW: 140 }); }
+    box = $('#ch-vcr');
+    if (needDraw('vcr', box, ['vcr_jalan'], force)) { const r = rowsOf('vcr_jalan'); if (!r) placeholder(box, ['vcr_jalan']); else hbar(box, r.map((d) => { const v = Number(d.vcr_2024); return { label: d.nama_jalan, value: v, color: v >= 0.84 ? '#C62828' : (v >= 0.5 ? '#E08A00' : '#2E7D32'), lines: ['VCR ' + fmt(v, 2), v >= 0.84 ? 'Mendekati jenuh' : (v >= 0.5 ? 'Arus sedang' : 'Arus lancar')] }; }), { fmtV: (v) => fmt(v, 2), labW: 210, max: 1, ref: 0.84, refLabel: 'batas 0,84' }); }
+    box = $('#ch-distrik');
+    if (needDraw('distrik', box, ['distrik'], force)) { const r = rowsOf('distrik'); if (!r) placeholder(box, ['distrik']); else hbar(box, r.slice().sort((a, b) => b.luas_ha - a.luas_ha).map((d) => ({ label: d.no + '. ' + d.nama, value: Number(d.luas_ha), color: DISTRIK_C(d.nama), lines: [fmt(d.luas_ha, 2) + ' ha', trunc(d.fungsi_utama, 90)] })), { fmtV: (v) => fmt(v, 1) + ' ha', labW: 250, rowH: 32 }); }
+  }
+
+
+  /* ---------- drone survey charts ---------- */
+  function gauge(box, value, t, label) {
+    const W = box.clientWidth; if (!W) return; const H = 86;
+    const ph = box.querySelector('.ph'); if (ph) ph.remove();
+    const old = box.querySelector('svg'); if (old) old.remove();
+    const max = Math.max(t[2] * 1.3, value * 1.12);
+    const x = d3.scaleLinear().domain([0, max]).range([8, W - 8]);
+    const svg = d3.select(box).append('svg').attr('viewBox', '0 0 ' + W + ' ' + H).attr('width', '100%').attr('height', H);
+    const bands = [[0, t[0], '#4CAF50', 'Kelas 1'], [t[0], t[1], '#A5D46A', 'Kelas 2'], [t[1], t[2], '#F2C94C', 'Kelas 3'], [t[2], max, '#EF9A9A', 'Di luar']];
+    const y0 = 36, bh = 16;
+    svg.selectAll('rect.bd').data(bands).join('rect').attr('class', 'bd').attr('x', (d) => x(d[0])).attr('width', (d) => Math.max(0, x(d[1]) - x(d[0]))).attr('y', y0).attr('height', bh)
+      .attr('fill', (d) => d[2]).attr('rx', 3).style('opacity', 0).transition().duration(REDUCE ? 0 : 500).delay((d, i) => (REDUCE ? 0 : i * 90)).style('opacity', 1);
+    svg.selectAll('text.bl').data(bands).join('text').attr('class', 'bl').attr('x', (d) => (x(d[0]) + x(d[1])) / 2).attr('y', y0 + bh + 14).attr('text-anchor', 'middle').attr('font-size', 10.5).attr('fill', '#4A5A6E')
+      .text((d) => (x(d[1]) - x(d[0]) > 40 ? d[3] : ''));
+    svg.selectAll('text.th').data(t).join('text').attr('class', 'th').attr('x', (d) => x(d)).attr('y', y0 + bh + 28).attr('text-anchor', 'middle').attr('font-size', 10).attr('fill', '#7A8899').text((d) => fmt(d, 2) + ' m');
+    const mg = svg.append('g').attr('transform', 'translate(' + x(0) + ',0)');
+    mg.append('line').attr('y1', 20).attr('y2', y0 + bh + 2).attr('stroke', '#0A2E52').attr('stroke-width', 2.5);
+    mg.append('path').attr('d', 'M-7,12 L7,12 L0,22 Z').attr('fill', '#0A2E52');
+    const lbl = mg.append('text').attr('y', 9).attr('font-size', 11.5).attr('font-weight', 700).attr('fill', '#0A2E52').text(label + ' ' + fmt(value, 3) + ' m');
+    const xv = x(value); lbl.attr('text-anchor', xv > W - 70 ? 'end' : (xv < 70 ? 'start' : 'middle'));
+    mg.transition().duration(REDUCE ? 0 : 1200).ease(d3.easeCubicOut).attr('transform', 'translate(' + xv + ',0)');
+  }
+  function residChart(box, rows) {
+    const ph = box.querySelector('.ph'); if (ph) ph.remove();
+    const W = box.clientWidth, H = 260, m = { t: 14, r: 8, b: 42, l: 42 };
+    const old = box.querySelector('svg'); if (old) old.remove(); const oldLg = box.querySelector('.lg'); if (oldLg) oldLg.remove();
+    const tip = chartTip(box);
+    const comps = [['dx', 'ΔX', '#1E73BE'], ['dy', 'ΔY', '#C9972A'], ['dz', 'ΔZ', '#7B1FA2']];
+    const mx = (d3.max(rows, (r) => d3.max(comps, (c) => Math.abs(Number(r[c[0]])))) || 1) * 1.1;
+    const x0 = d3.scaleBand().domain(rows.map((r) => r.titik)).range([m.l, W - m.r]).padding(0.22);
+    const x1 = d3.scaleBand().domain(comps.map((c) => c[0])).range([0, x0.bandwidth()]).padding(0.12);
+    const y = d3.scaleLinear().domain([-mx, mx]).range([H - m.b, m.t]).nice();
+    const svg = d3.select(box).append('svg').attr('viewBox', '0 0 ' + W + ' ' + H).attr('width', '100%').attr('height', H);
+    svg.append('g').selectAll('line').data(y.ticks(6)).join('line').attr('x1', m.l).attr('x2', W - m.r).attr('y1', (d) => y(d)).attr('y2', (d) => y(d)).attr('stroke', (d) => (d === 0 ? '#5B6B80' : '#E3EAF2'));
+    svg.append('g').selectAll('text').data(y.ticks(6)).join('text').attr('x', m.l - 6).attr('y', (d) => y(d)).attr('dy', '.32em').attr('text-anchor', 'end').attr('font-size', 10.5).attr('fill', '#7A8899').text((d) => fmt(d, 1));
+    const g = svg.selectAll('g.icp').data(rows).join('g').attr('class', 'icp').attr('transform', (r) => 'translate(' + x0(r.titik) + ',0)');
+    const bars = g.selectAll('rect').data((r) => comps.map((c) => ({ r, c, v: Number(r[c[0]]) }))).join('rect')
+      .attr('x', (d) => x1(d.c[0])).attr('width', x1.bandwidth()).attr('rx', 2.5).attr('fill', (d) => d.c[2]).attr('y', y(0)).attr('height', 0);
+    bars.transition().duration(REDUCE ? 0 : 900).delay((d, i) => (REDUCE ? 0 : i * 25)).ease(d3.easeCubicOut)
+      .attr('y', (d) => (d.v >= 0 ? y(d.v) : y(0))).attr('height', (d) => Math.abs(y(d.v) - y(0)));
+    svg.selectAll('text.xl').data(rows).join('text').attr('class', 'xl').attr('x', (r) => x0(r.titik) + x0.bandwidth() / 2).attr('y', H - m.b + 16).attr('text-anchor', 'middle').attr('font-size', 11).attr('fill', '#2B3B50').text((r) => r.titik);
+    svg.append('text').attr('transform', 'rotate(-90)').attr('x', -(H - m.b + m.t) / 2).attr('y', 11).attr('text-anchor', 'middle').attr('font-size', 10.5).attr('fill', '#7A8899').text('meter');
+    bars.on('mousemove', (ev, d) => { bars.attr('opacity', (q) => (q.r === d.r ? 1 : 0.35)); tip.show(d.r.titik, ['ΔX ' + fmt(d.r.dx, 3) + ' m', 'ΔY ' + fmt(d.r.dy, 3) + ' m', 'ΔZ ' + fmt(d.r.dz, 3) + ' m'], ev); })
+      .on('mouseleave', () => { bars.attr('opacity', 1); tip.hide(); });
+    const lg = mk('div', 'lg'); comps.forEach((c) => { const s = mk('span'); const sw = mk('span', 'sw'); sw.style.background = c[2]; s.append(sw, document.createTextNode(c[1])); lg.append(s); }); box.append(lg);
+  }
+  function scatterChart(box, rows, acc) {
+    const ph = box.querySelector('.ph'); if (ph) ph.remove();
+    const W = box.clientWidth, H = Math.min(300, Math.max(240, W * 0.62));
+    const old = box.querySelector('svg'); if (old) old.remove();
+    const tip = chartTip(box);
+    const lim = Math.max(Number(acc.ce90), d3.max(rows, (r) => Math.max(Math.abs(Number(r.dx)), Math.abs(Number(r.dy))))) * 1.18;
+    const S2 = Math.min(W - 60, H - 34); const cx = W / 2, cy = (H - 6) / 2;
+    const k = (S2 / 2) / lim;
+    const svg = d3.select(box).append('svg').attr('viewBox', '0 0 ' + W + ' ' + H).attr('width', '100%').attr('height', H);
+    svg.append('rect').attr('x', cx - S2 / 2).attr('y', cy - S2 / 2).attr('width', S2).attr('height', S2).attr('fill', '#F7FAFD').attr('stroke', '#E3EAF2');
+    svg.append('line').attr('x1', cx - S2 / 2).attr('x2', cx + S2 / 2).attr('y1', cy).attr('y2', cy).attr('stroke', '#B8C6D6');
+    svg.append('line').attr('y1', cy - S2 / 2).attr('y2', cy + S2 / 2).attr('x1', cx).attr('x2', cx).attr('stroke', '#B8C6D6');
+    const circ = [[Number(acc.ce90), '#C62828', 'CE90 ' + fmt(acc.ce90, 3) + ' m', '0'], [Number(acc.rmse_h), '#1E73BE', 'RMSE ' + fmt(acc.rmse_h, 3) + ' m', '5 4']];
+    circ.forEach((c, i) => {
+      svg.append('circle').attr('cx', cx).attr('cy', cy).attr('r', 0).attr('fill', 'none').attr('stroke', c[1]).attr('stroke-width', 1.8).attr('stroke-dasharray', c[3])
+        .transition().duration(REDUCE ? 0 : 900).delay(REDUCE ? 0 : i * 150).attr('r', c[0] * k);
+      svg.append('text').attr('x', cx - c[0] * k * 0.72 - 4).attr('y', cy + c[0] * k * 0.72 + 12).attr('text-anchor', 'end').attr('font-size', 10.5).attr('font-weight', 600).attr('fill', c[1]).text(c[2]);
+    });
+    svg.append('text').attr('x', cx + S2 / 2 - 4).attr('y', cy - 5).attr('text-anchor', 'end').attr('font-size', 10.5).attr('fill', '#7A8899').text('ΔX (m) →');
+    svg.append('text').attr('x', cx + 5).attr('y', cy - S2 / 2 + 12).attr('font-size', 10.5).attr('fill', '#7A8899').text('↑ ΔY (m)');
+    const pts = svg.selectAll('g.p').data(rows).join('g').attr('class', 'p').attr('transform', 'translate(' + cx + ',' + cy + ')').style('cursor', 'default');
+    pts.append('circle').attr('r', 6.5).attr('fill', (r) => icpColor(r.dxy)).attr('stroke', '#fff').attr('stroke-width', 2);
+    pts.append('text').attr('x', 9).attr('dy', '.32em').attr('font-size', 10.5).attr('fill', '#2B3B50').text((r) => String(r.titik).replace('ICP ', ''));
+    pts.transition().duration(REDUCE ? 0 : 900).delay((d, i) => (REDUCE ? 0 : 300 + i * 70)).ease(d3.easeBackOut).attr('transform', (r) => 'translate(' + (cx + Number(r.dx) * k) + ',' + (cy - Number(r.dy) * k) + ')');
+    pts.on('mousemove', (ev, r) => tip.show(r.titik, ['ΔX ' + fmt(r.dx, 3) + ' m · ΔY ' + fmt(r.dy, 3) + ' m', 'Residual ' + fmt(r.dxy, 3) + ' m'], ev)).on('mouseleave', () => tip.hide());
+  }
+  const KCLS = { 'Kelas 1': 'k1', 'Kelas 2': 'k2', 'Kelas 3': 'k3', 'Di luar Kelas 3': 'k0' };
+  function drawDrone(force) {
+    const meta = rowsOf('drone_meta'), acc = rowsOf('drone_akurasi'), icp = rowsOf('drone_icp'), kel = rowsOf('drone_kelas');
+    if (!document.getElementById('gg-h')) return;
+    const vh = document.getElementById('vd-h'); vh.className = 'verdict-v ' + (kel && kel[0] ? (KCLS[kel[0].kelas_horizontal] || '') : '');
+    let box = $('#gg-h');
+    if (needDraw('gg-h', box, ['drone_akurasi', 'drone_meta'], force)) { if (!acc || !meta) placeholder(box, ['drone_icp', 'drone_meta']); else gauge(box, Number(acc[0].ce90), [meta[0].ce90_kelas1, meta[0].ce90_kelas2, meta[0].ce90_kelas3].map(Number), 'CE90'); }
+    box = $('#ch-resid');
+    if (needDraw('resid', box, ['drone_icp'], force)) { if (!icp) placeholder(box, ['drone_icp']); else residChart(box, icp.slice().sort((a, b) => a.no - b.no)); }
+    box = $('#ch-scatter');
+    if (needDraw('scatter', box, ['drone_icp', 'drone_akurasi'], force)) { if (!icp || !acc) placeholder(box, ['drone_icp']); else scatterChart(box, icp, acc[0]); }
+  }
+
+  /* ---------- zone bars (interactive legend) ---------- */
+  function drawZoneBars(id, getCtl, limit, force) {
+    const box = document.getElementById(id); const ctl = getCtl();
+    const rows = rowsOf('blok_luas_zona');
+    if (!rows) { const bad = ['error', 'missing', 'declined'].includes(st('geo_blokzona')); box.replaceChildren(mk('div', 'cd', bad ? 'Data rencana blok belum dapat dimuat' : 'Menghitung luas per zona…')); box.dataset.k = ''; return; }
+    const list = limit ? rows.filter((r) => r.zona !== 'Belum Teridentifikasi').slice(0, limit) : rows;
+    const key = list.map((r) => r.zona + r.luas_ha).join('|') + (ctl ? [...ctl.S.hidden].join(',') : '');
+    if (!force && box.dataset.k === key) return; box.dataset.k = key;
+    const max = d3.max(list, (r) => r.luas_ha) || 1;
+    box.replaceChildren(...list.map((r) => {
+      const row = mk('div', 'zb-r'); const sw = mk('span', 'sw'); sw.style.background = ZC[r.zona] || '#ccc';
+      row.append(sw, mk('span', 'zb-n', r.zona.replace('Zona ', '')), mk('span', 'zb-v', fmt(r.luas_ha, 1) + ' ha · ' + fmt(r.persen, 1) + '%'));
+      const bar = mk('div', 'zb-bar'); const i = mk('i'); i.style.background = ZC[r.zona] || '#ccc'; bar.append(i); row.append(bar);
+      requestAnimationFrame(() => requestAnimationFrame(() => { i.style.width = Math.max(1.5, (r.luas_ha / max) * 100) + '%'; }));
+      if (ctl && ctl.S.hidden.has(r.zona)) row.classList.add('off');
+      row.title = r.zona + ' — ' + fmt(r.jumlah_blok, 0) + ' blok';
+      row.addEventListener('mouseenter', () => { const c = getCtl(); if (c) c.highlight(r.zona); row.classList.add('hl'); });
+      row.addEventListener('mouseleave', () => { const c = getCtl(); if (c) c.highlight(null); row.classList.remove('hl'); });
+      row.addEventListener('click', () => { const c = getCtl(); if (c) c.toggleZona(r.zona); });
+      return row;
+    }));
+  }
+
+  /* ---------- marks: numbers, tables, lists ---------- */
+  function countUp(el, target, d) {
+    if (REDUCE || el.offsetParent === null) { el.textContent = fmt(target, d); return; }
+    const t0 = performance.now(), dur = 1200; const tok = (el._tok = (el._tok || 0) + 1);
+    const step = (t) => { if (el._tok !== tok) return; const p = Math.min(1, (t - t0) / dur); const e = 1 - Math.pow(1 - p, 3);
+      el.textContent = fmt(p < 1 ? target * e : target, d); if (p < 1) requestAnimationFrame(step); };
+    requestAnimationFrame(step);
+  }
+  function fillNumbers() {
+    $$('[data-source][data-field][data-row]').forEach((el) => {
+      const rows = rowsOf(el.dataset.source); const d = Number(el.dataset.fmt == null ? 2 : el.dataset.fmt);
+      if (!rows) { el.textContent = '—'; el.dataset.val = ''; return; }
+      const r = rows[Number(el.dataset.row)]; const v = r ? r[el.dataset.field] : null;
+      if (el.dataset.val === String(v)) return; el.dataset.val = String(v);
+      if (v == null || isNaN(Number(v))) { el.textContent = v == null ? '—' : String(v); return; }
+      countUp(el, Number(v), d);
+    });
+  }
+  function replayCounts(sec) { $$('[data-val]', sec).forEach((el) => { const v = Number(el.dataset.val); if (el.dataset.val !== '' && !isNaN(v)) countUp(el, v, Number(el.dataset.fmt == null ? 2 : el.dataset.fmt)); }); }
+  function fillTable(id, ds, cols, keyOf, sort) {
+    const tb = $('#' + id + ' tbody'); const rows = rowsOf(ds);
+    if (!rows) { tb.replaceChildren(); return; }
+    const rs = sort ? rows.slice().sort(sort) : rows;
+    tb.replaceChildren(...rs.map((r) => { const tr = mk('tr'); tr.dataset.key = keyOf(r); cols.forEach((c) => { const v = r[c.f]; tr.append(mk('td', null, c.fmt ? c.fmt(v) : (v == null || v === '' ? '—' : String(v)))); }); return tr; }));
+  }
+  function fillLists() {
+    const kt = rowsOf('kampung_tua_elemen'); const ol = $('#ls-kt');
+    ol.replaceChildren(...(kt || []).slice().sort((a, b) => a.no - b.no).map((r) => mk('li', null, r.item)));
+    const ds = rowsOf('distrik'); const ch = $('#chips-distrik');
+    ch.replaceChildren(...(ds || []).slice().sort((a, b) => a.no - b.no).map((r) => { const c = mk('span', 'chip'); c.append(mk('i', null, String(r.no)), document.createTextNode(r.nama + ' · ' + fmt(r.luas_ha, 0) + ' ha')); return c; }));
+  }
+  function fillTables() {
+    const enc = encodeURIComponent;
+    fillTable('tb-vcr', 'vcr_jalan', [{ f: 'nama_jalan' }, { f: 'vcr_2024', fmt: (v) => fmt(v, 2) }, { f: 'durasi_capai_084_eksisting' }, { f: 'tahun_capai_084_rencana' }], (r) => r.nama_jalan);
+    fillTable('tb-iklim', 'hidroklimatologi', [{ f: 'parameter' }, { f: 'kategori' }, { f: 'nilai' }, { f: 'satuan' }, { f: 'catatan' }], (r) => enc(r.parameter) + ',' + enc(r.kategori));
+    fillTable('tb-oseano', 'hidrooceanografi', [{ f: 'parameter' }, { f: 'eksisting' }, { f: 'pasca_reklamasi' }, { f: 'keterangan' }], (r) => String(r.no), (a, b) => a.no - b.no);
+    fillTable('tb-rth', 'mangrove_rth', [{ f: 'skenario' }, { f: 'luas_mangrove_ha', fmt: (v) => fmt(v, 2) }, { f: 'luas_rth_pengganti_ha', fmt: (v) => fmt(v, 2) }, { f: 'rasio_penggantian' }], (r) => r.skenario);
+    fillTable('tb-icp', 'drone_icp', [{ f: 'titik' }, { f: 'x_icp', fmt: (v) => fmt(v, 3) }, { f: 'y_icp', fmt: (v) => fmt(v, 3) }, { f: 'dx', fmt: (v) => fmt(v, 3) }, { f: 'dy', fmt: (v) => fmt(v, 3) }, { f: 'dxy', fmt: (v) => fmt(v, 3) }, { f: 'z_icp', fmt: (v) => fmt(v, 3) }, { f: 'z_dsm', fmt: (v) => fmt(v, 3) }, { f: 'dz', fmt: (v) => fmt(v, 3) }], (r) => r.titik, (a, b) => a.no - b.no);
+    fillTable('tb-distrik', 'distrik', [{ f: 'nama' }, { f: 'luas_ha', fmt: (v) => fmt(v, 2) }, { f: 'fungsi_utama' }], (r) => r.nama, (a, b) => b.luas_ha - a.luas_ha);
+  }
+
+  /* ======================= galleries + lightbox ======================= */
+  const ZOOM_IC = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="7"/><path d="M8 11h6M11 8v6M20 20l-4-4"/></svg>';
+  function drawGallery(id, grup) {
+    const box = document.getElementById(id);
+    const rows = rowsOf('img_thumbs');
+    if (!rows) {
+      if (!box.dataset.sk) { box.dataset.sk = '1'; box.replaceChildren(...Array.from({ length: grup === 'desain' ? 7 : 8 }, () => { const b = mk('div', 'gi'); const f = mk('div', 'gi-fig'); b.append(f, mk('div', 'gi-d', ' ')); return b; })); }
+      if (['error', 'missing', 'declined'].includes(st('img_thumbs'))) { box.replaceChildren(mk('div', 'cd', 'Gambar belum dapat dimuat.')); box.dataset.sk = ''; }
+      return;
+    }
+    if (box.dataset.done) return; box.dataset.done = '1';
+    const items = rows.filter((r) => r.grup === grup).sort((a, b) => a.urutan - b.urutan);
+    box.replaceChildren(...items.map((r, i) => {
+      const b = mk('button', 'gi'); b.type = 'button'; b.setAttribute('aria-label', 'Perbesar: ' + r.judul);
+      b.style.animation = REDUCE ? '' : 'jtpUp .6s var(--ease) both'; b.style.animationDelay = (i * 55) + 'ms';
+      const fig = mk('div', 'gi-fig'); const img = mk('img'); img.alt = r.judul; img.loading = 'lazy'; img.decoding = 'async';
+      img.addEventListener('load', () => { img.classList.add('ld'); fig.style.animation = 'none'; });
+      img.src = r.thumb;
+      const z = mk('span', 'gi-zoom'); z.innerHTML = ZOOM_IC;
+      fig.append(img, z, mk('span', 'gi-no', String(i + 1).padStart(2, '0')), mk('span', 'gi-t', r.judul));
+      b.append(fig, mk('div', 'gi-d', r.deskripsi));
+      b.addEventListener('click', () => openLB(items, i));
+      return b;
+    }));
+  }
+
+  const LB = { items: null, i: 0, s: 1, x: 0, y: 0, fit: 1, w: 0, h: 0, cur: '' };
+  const lb = $('#lb'), stage = $('#lb-stage'), limg = $('#lb-img'), lload = $('#lb-load');
+  const fullDs = (id) => (id[0] === 'd' ? 'img_full_desain' : (Number(id.slice(1)) <= 8 ? 'img_full_peta_a' : 'img_full_peta_b'));
+  function applyT() { limg.style.transform = 'translate(' + LB.x + 'px,' + LB.y + 'px) scale(' + LB.s + ')'; }
+  function fitImg(keepDisplay) {
+    const W = stage.clientWidth, H = stage.clientHeight; const nw = limg.naturalWidth || 1, nh = limg.naturalHeight || 1;
+    if (keepDisplay && LB.w) { const k = LB.w / nw; LB.s *= k; LB.fit *= k; }
+    else { LB.fit = Math.min((W * 0.94) / nw, (H * 0.94) / nh); LB.s = LB.fit; LB.x = (W - nw * LB.s) / 2; LB.y = (H - nh * LB.s) / 2; }
+    LB.w = nw; LB.h = nh; applyT();
+  }
+  function setLbImg(src, low) {
+    const keep = !low && LB.w && limg.classList.contains('low');
+    limg.classList.toggle('low', !!low);
+    const done = () => { limg.removeEventListener('load', done); fitImg(keep); if (!keep) { limg.classList.remove('pop'); void limg.offsetWidth; limg.classList.add('pop'); } };
+    limg.addEventListener('load', done); limg.src = src;
+  }
+  function zoomAt(f, px, py) {
+    const ns = Math.min(LB.fit * 10, Math.max(LB.fit * 0.6, LB.s * f)); const k = ns / LB.s;
+    LB.x = px - (px - LB.x) * k; LB.y = py - (py - LB.y) * k; LB.s = ns; applyT();
+  }
+  function showLB() {
+    const it = LB.items[LB.i];
+    $('#lb-t').textContent = it.judul; $('#lb-d').textContent = it.deskripsi; $('#lb-count').textContent = (LB.i + 1) + ' / ' + LB.items.length;
+    stage.setAttribute('data-source', fullDs(it.id)); LB.cur = ''; LB.w = 0;
+    setLbImg(it.thumb, true); refreshLB();
+  }
+  function refreshLB() {
+    if (lb.hidden || !LB.items) return; const it = LB.items[LB.i]; const ds = fullDs(it.id); const d = dash.data(ds);
+    if (d && d.status === 'ok') { const r = (Array.isArray(d.data) ? d.data : []).find((x) => x.id === it.id); if (r && LB.cur !== it.id) { LB.cur = it.id; setLbImg(r.gambar, false); } lload.hidden = true; }
+    else { lload.hidden = false; lload.textContent = d && ['error', 'missing'].includes(d.status) ? 'Resolusi penuh belum dapat dimuat' : 'Memuat resolusi penuh…'; }
+  }
+  function onKey(e) {
+    if (e.key === 'Escape') closeLB(); else if (e.key === 'ArrowRight') nav(1); else if (e.key === 'ArrowLeft') nav(-1);
+    else if (e.key === '+' || e.key === '=') zoomAt(1.3, stage.clientWidth / 2, stage.clientHeight / 2); else if (e.key === '-') zoomAt(1 / 1.3, stage.clientWidth / 2, stage.clientHeight / 2);
+  }
+  function openLB(items, i) { LB.items = items; LB.i = i; lb.hidden = false; requestAnimationFrame(() => lb.classList.add('on')); document.addEventListener('keydown', onKey); showLB(); $('#lb-x').focus(); }
+  function closeLB() { lb.classList.remove('on'); document.removeEventListener('keydown', onKey); setTimeout(() => { lb.hidden = true; }, 260); }
+  function nav(k) { if (!LB.items) return; LB.i = (LB.i + k + LB.items.length) % LB.items.length; showLB(); }
+  $('#lb-x').addEventListener('click', closeLB);
+  $('#lb-prev').addEventListener('click', (e) => { e.stopPropagation(); nav(-1); });
+  $('#lb-next').addEventListener('click', (e) => { e.stopPropagation(); nav(1); });
+  $('#lb-in').addEventListener('click', () => zoomAt(1.4, stage.clientWidth / 2, stage.clientHeight / 2));
+  $('#lb-out').addEventListener('click', () => zoomAt(1 / 1.4, stage.clientWidth / 2, stage.clientHeight / 2));
+  $('#lb-fit').addEventListener('click', () => { LB.w = 0; fitImg(false); });
+  stage.addEventListener('wheel', (e) => { e.preventDefault(); const r = stage.getBoundingClientRect(); zoomAt(Math.exp(-e.deltaY * 0.0016), e.clientX - r.left, e.clientY - r.top); }, { passive: false });
+  stage.addEventListener('dblclick', (e) => { const r = stage.getBoundingClientRect(); if (LB.s > LB.fit * 1.5) { LB.w = 0; fitImg(false); } else zoomAt(2.6, e.clientX - r.left, e.clientY - r.top); });
+  let drag = null;
+  stage.addEventListener('pointerdown', (e) => { if (e.target.closest('.lb-btn')) return; drag = { x: e.clientX, y: e.clientY, ox: LB.x, oy: LB.y, moved: false, bg: e.target === stage }; stage.classList.add('drag'); stage.setPointerCapture(e.pointerId); });
+  stage.addEventListener('pointermove', (e) => { if (!drag) return; const dx = e.clientX - drag.x, dy = e.clientY - drag.y; if (Math.abs(dx) + Math.abs(dy) > 3) drag.moved = true; LB.x = drag.ox + dx; LB.y = drag.oy + dy; applyT(); });
+  const endDrag = (e) => { if (!drag) return; const wasClick = !drag.moved && drag.bg; drag = null; stage.classList.remove('drag'); if (wasClick) closeLB(); };
+  stage.addEventListener('pointerup', endDrag); stage.addEventListener('pointercancel', endDrag);
+  limg.addEventListener('dragstart', (e) => e.preventDefault());
+
+  /* ======================= tabs & sub-tabs ======================= */
+  const ind = $('#jh-ind');
+  function moveInd() { const b = $('.jh-tab.on'); if (!b) return; ind.style.left = b.offsetLeft + 'px'; ind.style.width = b.offsetWidth + 'px'; }
+  function enter(sec) {
+    if (!sec) return; sec.classList.remove('shown', 'enter'); void sec.offsetWidth; sec.classList.add('enter');
+    clearTimeout(sec._t); sec._t = setTimeout(() => { sec.classList.remove('enter'); sec.classList.add('shown'); }, 1400);
+  }
+  let current = 'ringkasan';
+  function showTab(name) {
+    if (!document.getElementById('tab-' + name)) name = 'ringkasan';
+    current = name;
+    $$('.tab').forEach((s) => { s.hidden = s.id !== 'tab-' + name; });
+    $$('.jh-tab').forEach((b) => b.classList.toggle('on', b.dataset.tab === name));
+    moveInd(); try { dash.setLink('tab-' + name); } catch (e) { /* noop */ }
+    const sec = document.getElementById('tab-' + name); enter(sec);
+    $$('video').forEach((v) => { if (!sec.contains(v)) try { v.pause(); } catch (e) { /* noop */ } });
+    requestAnimationFrame(() => { redraw(true); replayCounts(sec); });
+  }
+  $$('.jh-tab').forEach((b) => b.addEventListener('click', () => showTab(b.dataset.tab)));
+  $$('.seg').forEach((seg) => {
+    $$('button', seg).forEach((b) => b.addEventListener('click', () => {
+      $$('button', seg).forEach((x) => x.classList.toggle('on', x === b));
+      $$('button', seg).forEach((x) => { const s = document.getElementById(x.dataset.sub); if (s) s.hidden = x !== b; });
+      const s = document.getElementById(b.dataset.sub); if (s) { s.classList.remove('enter'); void s.offsetWidth; s.classList.add('enter'); clearTimeout(s._t); s._t = setTimeout(() => s.classList.remove('enter'), 1300); }
+      requestAnimationFrame(() => redraw(true));
+    }));
+  });
+
+  /* ======================= main redraw ======================= */
+  function redraw(force) {
+    fillNumbers(); fillTables(); fillLists();
+    drawCharts(!!force); drawDrone(!!force);
+    drawGallery('gal-desain', 'desain'); drawGallery('gal-peta', 'peta_eksisting');
+    ensureMaps();
+    drawZoneBars('zb-ringkas', () => MAPS.main, 5, false); drawZoneBars('zb-full', () => MAPS.blok, 0, false);
+    refreshLB();
+  }
+  dash.onData(() => { redraw(false); moveInd(); });
+  window.addEventListener('resize', () => requestAnimationFrame(() => { moveInd(); if (!lb.hidden && LB.w) { LB.w = 0; fitImg(false); } }));
+
+  let start = 'ringkasan';
+  try { const h = String(location.hash || '').replace('#', ''); if (h.indexOf('tab-') === 0) start = h.slice(4); } catch (e) { /* noop */ }
+  showTab(start);
+})();
+</script>
+</body>
+</html>
